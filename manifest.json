@@ -1,0 +1,16 @@
+{
+  "name": "Remanejamento de Rota",
+  "short_name": "Remanejamento",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1769aa",
+  "theme_color": "#1769aa",
+  "icons": [
+    {
+      "src": "icone-app.png",
+      "sizes": "425x425",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
