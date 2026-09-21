@@ -82,8 +82,13 @@
   .rm-medidor{background:var(--panel-2);border:1px solid var(--line);color:var(--gray);border-radius:8px;width:40px;font-size:16px}
   .entry.digitado{opacity:.75;border-left-color:var(--gray)}
   .entry-status-row{display:flex;gap:8px;margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
-  .entry-status-btn{flex:1;background:none;border:1px solid var(--gray);color:var(--gray);border-radius:6px;font-size:11.5px;font-weight:600;padding:7px 4px}
-  .entry-status-btn.marcado{background:rgba(138,151,143,.15)}
+  .entry-status-btn{flex:1;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;font-size:11.5px;font-weight:600;padding:7px 4px}
+  .entry-status-btn.marcado{background:rgba(23,105,170,.12)}
+  .exec-status{font-size:12px;font-weight:700;margin-top:6px}
+  .exec-status.pendente{color:#c77700}
+  .exec-status.executado{color:#218838}
+  .entry-exec-btn{flex:1;background:none;border:1px solid #218838;color:#218838;border-radius:6px;font-size:11.5px;font-weight:700;padding:7px 4px}
+  .entry-exec-btn.desfazer{border-color:#c77700;color:#c77700}
   .entry-actions{display:flex;justify-content:flex-end;margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
   .entry-del{background:none;border:0;color:var(--red);font-size:18px;padding:4px 2px;cursor:pointer}
   .empty{text-align:center;color:var(--text-dim);font-family:-apple-system,system-ui,sans-serif;font-size:13px;padding:30px 10px}
@@ -105,11 +110,11 @@
     <button type="button" class="toggle-etapas-btn" id="toggleEtapaAtualBtn">Selecionar etapa atual (1 a 18)</button>
     <div class="etapa-opts" id="etapaAtualOpts" style="display:none"></div>
 
-    <label>Número do medidor *</label>
+    <label>Número do medidor</label>
     <div id="medidorList"></div>
     <button type="button" class="add-medidor-btn" id="addMedidorBtn">+ Adicionar medidor</button>
 
-    <label for="vizinha">Medidor ou UC vizinha *</label>
+    <label for="vizinha">Medidor ou UC vizinha</label>
     <input type="text" id="vizinha" placeholder="Ex: 987600 (referência de local)" autocomplete="off">
 
     <label for="rotaDestino">Etapa/rota que vai ser remanejado</label>
@@ -143,7 +148,7 @@
   </div>
 
   <div class="filtro-rota">
-    <input type="text" id="filtroRota" placeholder="Filtrar por rota/etapa..." autocomplete="off">
+    <input type="text" id="filtroRota" placeholder="🔎 Buscar medidor, código/UC, rua, bairro, rota ou etapa..." autocomplete="off">
   </div>
 
   <button class="export-btn" id="exportBtn">Exportar registros (CSV)</button>
@@ -376,14 +381,31 @@ function normalizarRegistros(){
     fotos:Array.isArray(e.fotos)?e.fotos:[],
     digitado:Boolean(e.digitado),
     digitadoEm:e.digitadoEm||null,
+    statusExecucao:e.statusExecucao==='executado'?'executado':'pendente',
+    executadoEm:e.executadoEm||null,
     criadoEm:e.criadoEm||Date.now()
   }));
 }
 
 function renderEntries(){
   const termo=filtroAtual.trim().toLowerCase();
+
+  // Busca geral: medidores, UC/código, rota/etapa, etapa atual,
+  // rua/bairro, observações e data do registro.
+  const textoPesquisavel = e => [
+    ...(Array.isArray(e.medidores) ? e.medidores : []),
+    e.vizinha,
+    e.rotaDestino,
+    e.etapaAtual,
+    e.rua,
+    e.obs,
+    e.dataRegistro,
+    e.statusExecucao,
+    e.statusExecucao==='executado'?'executado':'pendente'
+  ].filter(v => v !== undefined && v !== null).join(' ').toLowerCase();
+
   const filtradas=termo
-    ? entries.filter(e=>(e.rotaDestino||'').toLowerCase().includes(termo))
+    ? entries.filter(e=>textoPesquisavel(e).includes(termo))
     : entries;
 
   $('entryCount').textContent=filtradas.length;
@@ -408,9 +430,16 @@ function renderEntries(){
       ${e.obs?`<div class="entry-obs">${escapeHtml(e.obs)}</div>`:''}
       ${e.fotos.length?`<div class="entry-fotos" data-entry-id="${escapeHtml(e.id)}">${e.fotos.map((f,i)=>`<img src="${f}" data-i="${i}" alt="Foto">`).join('')}</div>`:''}
       ${e.digitado&&e.digitadoEm?`<div class="entry-meta">Digitado em ${formatDateHora(e.digitadoEm)}</div>`:''}
+      <div class="exec-status ${e.statusExecucao==='executado'?'executado':'pendente'}">
+        ${e.statusExecucao==='executado'?'🟢 Executado':'🟠 Pendente'}
+        ${e.executadoEm?` · ${formatDateHora(e.executadoEm)}`:''}
+      </div>
       <div class="entry-status-row">
         <button class="entry-status-btn${e.digitado?' marcado':''}" data-action="digitado" data-id="${escapeHtml(e.id)}">
           ${e.digitado?'Digitado ✓':'Marcar digitado'}
+        </button>
+        <button class="entry-exec-btn${e.statusExecucao==='executado'?' desfazer':''}" data-action="execucao" data-id="${escapeHtml(e.id)}">
+          ${e.statusExecucao==='executado'?'↩ Voltar a pendente':'✓ Marcar executado'}
         </button>
       </div>
       <div class="entry-actions">
@@ -433,6 +462,21 @@ function renderEntries(){
       if(!entry)return;
       entry.digitado=!entry.digitado;
       entry.digitadoEm=entry.digitado?Date.now():null;
+      if(salvarDados())renderEntries();
+    });
+  });
+
+  $('entriesList').querySelectorAll('.entry-exec-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const entry=entries.find(e=>e.id===btn.dataset.id);
+      if(!entry)return;
+      if(entry.statusExecucao==='executado'){
+        entry.statusExecucao='pendente';
+        entry.executadoEm=null;
+      }else{
+        entry.statusExecucao='executado';
+        entry.executadoEm=Date.now();
+      }
       if(salvarDados())renderEntries();
     });
   });
@@ -467,8 +511,8 @@ $('saveBtn').addEventListener('click',()=>{
   const status=$('statusMsg');
   const btn=$('saveBtn');
 
-  if(!medidores.length){
-    status.textContent='Informe ao menos um número de medidor.';
+  if(!medidores.length && !vizinha && !rua){
+    status.textContent='Informe pelo menos um dado: número do medidor, medidor/UC vizinha ou nome da rua.';
     status.style.color='var(--red)';
     return;
   }
@@ -480,7 +524,9 @@ $('saveBtn').addEventListener('click',()=>{
     id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),
     medidores,vizinha,rotaDestino,rua,dataRegistro,etapaAtual,obs,
     fotos:[...selectedFotos],
-    digitado:false,digitadoEm:null,criadoEm:Date.now()
+    digitado:false,digitadoEm:null,
+    statusExecucao:'pendente',executadoEm:null,
+    criadoEm:Date.now()
   };
 
   entries.push(novo);
@@ -511,12 +557,14 @@ function exportarCSV(){
   if(!entries.length)return;
   const cabecalho=[
     'Número(s) do medidor','Etapa atual','Medidor/UC vizinha','Rota de destino','Rua',
-    'Data do registro','Observações','Lançado em','Qtd. fotos','Digitado','Digitado em'
+    'Data do registro','Observações','Lançado em','Qtd. fotos','Digitado','Digitado em','Status','Executado em'
   ];
   const linhas=[...entries].sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0)).map(e=>[
     (e.medidores||[]).join(' | '),e.etapaAtual||'',e.vizinha||'',e.rotaDestino||'',e.rua||'',
     e.dataRegistro||'',e.obs||'',formatDateHora(e.criadoEm),e.fotos?e.fotos.length:0,
-    e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):''
+    e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'',
+    e.statusExecucao==='executado'?'Executado':'Pendente',
+    e.executadoEm?formatDateHora(e.executadoEm):''
   ].map(escapeCsv).join(';'));
 
   const csv='\uFEFF'+[cabecalho.join(';'),...linhas].join('\r\n');
@@ -538,13 +586,15 @@ async function compartilharArquivo(){
 
   const cabecalho=[
     'Número(s) do medidor','Etapa atual','Medidor/UC vizinha','Rota de destino','Rua',
-    'Data do registro','Observações','Lançado em','Qtd. fotos','Digitado','Digitado em'
+    'Data do registro','Observações','Lançado em','Qtd. fotos','Digitado','Digitado em','Status','Executado em'
   ];
 
   const linhas=[...entries].sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0)).map(e=>[
     (e.medidores||[]).join(' | '),e.etapaAtual||'',e.vizinha||'',e.rotaDestino||'',e.rua||'',
     e.dataRegistro||'',e.obs||'',formatDateHora(e.criadoEm),e.fotos?e.fotos.length:0,
-    e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):''
+    e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'',
+    e.statusExecucao==='executado'?'Executado':'Pendente',
+    e.executadoEm?formatDateHora(e.executadoEm):''
   ].map(escapeCsv).join(';'));
 
   const csv='\\uFEFF'+[cabecalho.join(';'),...linhas].join('\\r\\n');
