@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#2f7a4f">
+<meta name="theme-color" content="#1769aa">
 <title>Remanejamento de Rota</title>
 
 <style>
   :root{
     --bg:#fff; --panel:#fff; --panel-2:#f2f7f3; --line:#dbe8de;
-    --text:#163422; --text-dim:#5c7864; --accent:#2f7a4f;
-    --accent-dim:#cfe8d7; --accent-text:#fff; --red:#c85a40; --gray:#8a978f;
+    --text:#163a56; --text-dim:#587286; --accent:#1769aa;
+    --accent-dim:#cfe2f3; --accent-text:#fff; --red:#c85a40; --gray:#8a978f;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -76,7 +76,7 @@
   .add-medidor-btn{margin-bottom:4px}
   .etapa-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
   .etapa-opts button{padding:7px 4px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--text-dim);font-size:12px;font-weight:600}
-  .etapa-opts button.selecionada{background:rgba(47,122,79,.15);border-color:var(--accent);color:var(--accent)}
+  .etapa-opts button.selecionada{background:rgba(23,105,170,.15);border-color:var(--accent);color:var(--accent)}
   .medidor-row{display:flex;gap:8px;margin-bottom:8px}
   .medidor-row input{flex:1}
   .rm-medidor{background:var(--panel-2);border:1px solid var(--line);color:var(--gray);border-radius:8px;width:40px;font-size:16px}
@@ -140,9 +140,10 @@
   </div>
 
   <button class="export-btn" id="exportBtn">Exportar registros (CSV)</button>
+  <button class="export-btn" id="shareBtn">📤 Compartilhar arquivo</button>
   <div id="entriesList"></div>
 
-  <footer>Criado por Luis Ricardo</footer>
+  <footer>Desenvolvido por Luis Ricardo de Almeida Siqueira<br>© 2026 Luis Ricardo de Almeida Siqueira — Todos os direitos reservados.</footer>
 </div>
 
 <div class="foto-modal" id="fotoModal">
@@ -437,12 +438,6 @@ $('saveBtn').addEventListener('click',()=>{
     status.style.color='var(--red)';
     return;
   }
-  if(!vizinha){
-    status.textContent='Informe o medidor ou UC vizinha.';
-    status.style.color='var(--red)';
-    return;
-  }
-
   btn.disabled=true;
   status.textContent='Salvando...';
   status.style.color='var(--text-dim)';
@@ -499,6 +494,57 @@ function exportarCSV(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 $('exportBtn').addEventListener('click',exportarCSV);
+
+async function compartilharArquivo(){
+  if(!entries.length){
+    $('statusMsg').textContent='Não há registros para compartilhar.';
+    $('statusMsg').style.color='var(--red)';
+    return;
+  }
+
+  const cabecalho=[
+    'Número(s) do medidor','Medidor/UC vizinha','Rota de destino','Rua',
+    'Observações','Lançado em','Qtd. fotos','Digitado','Digitado em'
+  ];
+
+  const linhas=[...entries].sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0)).map(e=>[
+    (e.medidores||[]).join(' | '),e.vizinha||'',e.rotaDestino||'',e.rua||'',
+    e.obs||'',formatDateHora(e.criadoEm),e.fotos?e.fotos.length:0,
+    e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):''
+  ].map(escapeCsv).join(';'));
+
+  const csv='\\uFEFF'+[cabecalho.join(';'),...linhas].join('\\r\\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const arquivo=new File([blob],`remanejamento-rota-${todayStr()}.csv`,{type:'text/csv'});
+
+  try{
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[arquivo]}))){
+      await navigator.share({
+        title:'Registros — Remanejamento de Rota',
+        text:'Arquivo de registros do Remanejamento de Rota.',
+        files:[arquivo]
+      });
+      return;
+    }
+  }catch(err){
+    if(err && err.name==='AbortError') return;
+  }
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=arquivo.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+  $('statusMsg').textContent='Compartilhamento não disponível neste navegador. O arquivo foi baixado.';
+  $('statusMsg').style.color='var(--accent)';
+  setTimeout(()=>$('statusMsg').textContent='',3500);
+}
+
+$('shareBtn').addEventListener('click',compartilharArquivo);
 
 entries=lerDados();
 normalizarRegistros();
