@@ -167,6 +167,8 @@
   .admin-lock-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
   .admin-lock-actions button{padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-weight:700}
   .admin-lock-actions .primary-lock{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .admin-remember{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;color:var(--text-dim)}
+  .admin-remember input{width:16px;height:16px}
   .admin-lock-msg{min-height:18px;margin-top:9px;text-align:center;color:var(--red);font-size:12px}
   .admin-counters{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:9px 0}
   .admin-counter{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);text-align:center}
@@ -317,9 +319,10 @@
       <input id="adminEmailInput" type="email" inputmode="email" autocomplete="username" placeholder="E-mail do administrador">
       <label class="admin-field-label" for="adminPasswordInput">Senha</label>
       <div class="admin-password-wrap">
-        <input id="adminPasswordInput" type="password" autocomplete="current-password" placeholder="Senha do administrador">
+        <input id="adminPasswordInput" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" placeholder="Senha do administrador">
         <button type="button" class="admin-eye" id="adminPasswordEye" aria-label="Mostrar senha">👁️</button>
       </div>
+      <label class="admin-remember"><input type="checkbox" id="adminRememberSession" checked> Manter acesso neste aparelho</label>
       <div class="admin-lock-actions">
         <button type="button" class="primary-lock" id="adminLoginSubmit">Entrar</button>
         <button type="button" id="adminBackToPinBtn">Voltar</button>
@@ -346,7 +349,7 @@
 <script>
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
-const PWA_BUILD='20260921-2200-ajustes';
+const PWA_BUILD='20260922-final-01';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -411,37 +414,79 @@ async function initFirebase(){
     const authMod=await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js');
     const fsMod=await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js');
     firebaseModules={app:appMod,auth:authMod,fs:fsMod};
+
     const app=appMod.initializeApp(FIREBASE_CONFIG);
     const auth=authMod.getAuth(app);
     firebaseDB=fsMod.getFirestore(app);
     firebaseModules.authInstance=auth;
-    if(!auth.currentUser){
-      await authMod.signInAnonymously(auth);
+
+    // Mantém a conta autenticada neste aparelho.
+    // O app NÃO troca uma sessão de administrador por uma sessão anônima.
+    try{
+      await authMod.setPersistence(auth,authMod.browserLocalPersistence);
+    }catch(e){
+      console.warn('Persistência de login:',e);
     }
-    firebaseUser=auth.currentUser;
+
+    // Espera o Firebase restaurar a sessão antes de decidir se precisa
+    // criar uma sessão anônima para um usuário comum.
+    const usuarioRestaurado=await new Promise(resolve=>{
+      let finalizado=false;
+      const unsub=authMod.onAuthStateChanged(auth,user=>{
+        if(finalizado)return;
+        finalizado=true;
+        try{unsub();}catch(e){}
+        resolve(user||null);
+      });
+    });
+
+    if(usuarioRestaurado){
+      firebaseUser=usuarioRestaurado;
+    }else{
+      await authMod.signInAnonymously(auth);
+      firebaseUser=auth.currentUser;
+    }
+
     await registrarUsuario();
     await verificarAdministrador();
-    setCloudStatus(isAdmin ? '☁️ Firebase conectado — ADMINISTRADOR PRINCIPAL.' : '☁️ Compartilhamento Firebase conectado.','online');
+
+    setCloudStatus(
+      isAdmin
+        ? '☁️ Firebase conectado — ADMINISTRADOR PRINCIPAL.'
+        : '☁️ Compartilhamento Firebase conectado.',
+      'online'
+    );
+
+    // PRIMEIRA CARGA: Firestore é a fonte oficial.
+    // Se o Firestore estiver vazio, a lista local também fica vazia.
+    // Isso impede que registros apagados voltem do localStorage.
+    const primeiraCarga=await fsMod.getDocs(fsMod.collection(firebaseDB,'remanejamentoRota'));
+    entries=primeiraCarga.docs.map(d=>({...(d.data()||{}),id:d.id}));
+    normalizarRegistros();
+    salvarLocal();
+    renderEntries();
+
     firebaseUnsubscribe=fsMod.onSnapshot(
       fsMod.collection(firebaseDB,'remanejamentoRota'),
       snap=>{
         if(cloudApplying)return;
-        const cloud=snap.docs.map(d=>d.data()).filter(Boolean);
-        if(!cloud.length)return;
-        const byId=new Map(entries.map(e=>[e.id,e]));
-        cloud.forEach(e=>byId.set(e.id,e));
-        entries=[...byId.values()];
+        // O snapshot inteiro substitui a lista local.
+        // Portanto, um documento apagado no Firebase desaparece também
+        // do aparelho, sem ser ressuscitado pelo localStorage.
+        entries=snap.docs.map(d=>({...(d.data()||{}),id:d.id}));
         normalizarRegistros();
         salvarLocal();
         renderEntries();
       },
       err=>{
         console.error('Firebase snapshot',err);
-        setCloudStatus('☁️ Firebase conectado, mas aguardando permissão do Firestore.','offline');
+        setCloudStatus(
+          '☁️ Firebase conectado, mas aguardando permissão do Firestore.',
+          'offline'
+        );
       }
     );
-    // Envia registros locais existentes para a nuvem, sem apagar nenhum.
-    for(const entry of entries) await salvarCloud(entry);
+
     return true;
   }catch(err){
     console.error('Falha ao iniciar Firebase',err);
@@ -452,17 +497,17 @@ async function initFirebase(){
   }
 }
 
-
 async function registrarUsuario(){
   if(!firebaseDB || !firebaseModules?.fs || !firebaseUser) return;
   try{
-    const {doc,setDoc}=firebaseModules.fs;
+    const {doc,setDoc,increment}=firebaseModules.fs;
     const email=(firebaseUser.email||'').trim().toLowerCase();
     await setDoc(doc(firebaseDB,USERS_COLLECTION,firebaseUser.uid),{
       uid:firebaseUser.uid,
       email:email || null,
       anonimo:!email,
       ultimoAcessoEm:Date.now(),
+      acessos:increment(1),
       app:'remanejamento-rota'
     },{merge:true});
   }catch(err){ console.warn('Registro do usuário:',err); }
@@ -538,7 +583,8 @@ function alternarSenha(){
   const input=$('adminPasswordInput');
   const mostrar=input.type==='password';
   input.type=mostrar?'text':'password';
-  $('adminPasswordEye').textContent=mostrar?'🙈':'👁️';
+  // Mantém somente o ícone de olho; não usa o macaquinho quando a senha está visível.
+  $('adminPasswordEye').textContent='👁️';
   $('adminPasswordEye').setAttribute('aria-label',mostrar?'Ocultar senha':'Mostrar senha');
 }
 
@@ -551,6 +597,17 @@ async function autenticarComSenha(){
   $('adminLockMsg').textContent='Entrando...';
   try{
     const auth=firebaseModules.authInstance;
+    const manterAcesso=$('adminRememberSession')?.checked!==false;
+    try{
+      await firebaseModules.auth.setPersistence(
+        auth,
+        manterAcesso
+          ? firebaseModules.auth.browserLocalPersistence
+          : firebaseModules.auth.browserSessionPersistence
+      );
+    }catch(e){
+      console.warn('Não foi possível ajustar a persistência:',e);
+    }
     const cred=await firebaseModules.auth.signInWithEmailAndPassword(auth,email,senha);
     firebaseUser=cred.user;
     const ok=await verificarAdministrador(true);
@@ -570,7 +627,12 @@ async function desbloquearPorPin(){
   if(!/^\d{4}$/.test(pin)){ $('adminLockMsg').textContent='Digite um PIN de 4 dígitos.'; return; }
   const hash=await sha256(pin);
   if(hash!==localStorage.getItem('remanejamento-admin-pin-hash')){ $('adminLockMsg').textContent='PIN incorreto.'; return; }
-  if(!firebaseUser?.email){ $('adminLockMsg').textContent='A sessão do Firebase expirou. Entre novamente com e-mail e senha.'; return; }
+  const usuarioAtual=firebaseModules?.authInstance?.currentUser||firebaseUser;
+  if(usuarioAtual && usuarioAtual!==firebaseUser) firebaseUser=usuarioAtual;
+  if(!firebaseUser?.email){
+    $('adminLockMsg').textContent='A sessão administrativa ainda está sendo restaurada. Aguarde um instante e tente novamente.';
+    return;
+  }
   const ok=await verificarAdministrador(true);
   if(!ok){ $('adminLockMsg').textContent='A conta não está autorizada como administrador.'; return; }
   localStorage.setItem('remanejamento-admin-unlocked-at',String(Date.now()));
@@ -621,6 +683,9 @@ async function desbloquearPorBiometria(){
     const rawId=fromBase64url(localStorage.getItem('remanejamento-admin-webauthn-id'));
     const cred=await navigator.credentials.get({publicKey:{challenge,allowCredentials:[{type:'public-key',id:rawId}],userVerification:'required',timeout:60000}});
     if(!cred)throw new Error('Biometria não confirmada.');
+    const usuarioAtual=firebaseModules?.authInstance?.currentUser||firebaseUser;
+    if(usuarioAtual && usuarioAtual!==firebaseUser) firebaseUser=usuarioAtual;
+    if(!firebaseUser?.email)throw new Error('A sessão administrativa não foi restaurada.');
     const ok=await verificarAdministrador(true);
     if(!ok)throw new Error('A conta não está autorizada como administrador.');
     localStorage.setItem('remanejamento-admin-unlocked-at',String(Date.now()));
@@ -630,6 +695,8 @@ async function desbloquearPorBiometria(){
 }
 
 async function authModFallbackAnonymous(){
+  // Compatibilidade para versões antigas do app.
+  // Não é chamada pelo fluxo administrativo atual.
   const auth=firebaseModules.authInstance;
   await firebaseModules.auth.signOut(auth);
   await firebaseModules.auth.signInAnonymously(auth);
@@ -641,12 +708,16 @@ async function authModFallbackAnonymous(){
 }
 
 async function sairAdministrador(){
-  if(!firebaseModules?.authInstance)return;
-  try{
-    await authModFallbackAnonymous();
-    $('adminPanel').style.display='none';
-    setCloudStatus('☁️ Compartilhamento Firebase conectado.','online');
-  }catch(err){ console.error(err); }
+  // Não encerra a sessão do Firebase.
+  // Apenas bloqueia a área administrativa. Assim, no próximo acesso,
+  // PIN/biometria podem desbloquear sem exigir e-mail e senha novamente.
+  lockAdminArea();
+  setCloudStatus(
+    firebaseUser?.email
+      ? '☁️ Sessão do administrador mantida neste aparelho.'
+      : '☁️ Compartilhamento Firebase conectado.',
+    'online'
+  );
 }
 
 function atualizarAdminUI(){
@@ -720,8 +791,18 @@ async function renderAdminPanel(){
       const adminsSnap=await getDocs(collection(firebaseDB,ADMIN_COLLECTION));
       admins=adminsSnap.docs.map(d=>d.data()).filter(Boolean).sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));
     }
-    const ativos24h=usersSnap.docs.filter(d=>{const t=Number(d.data()?.ultimoAcessoEm||0);return t && Date.now()-t<=24*60*60*1000;}).length;
-    if(box)box.innerHTML=`<div class="admin-counters"><div class="admin-counter"><strong>${usersSnap.size}</strong><span>USUÁRIOS CADASTRADOS</span></div><div class="admin-counter"><strong>${ativos24h}</strong><span>ATIVOS (24H)</span></div><div class="admin-counter"><strong>${admins.length+1}</strong><span>ADMINISTRADORES</span></div><div class="admin-counter"><strong>${docs.length}</strong><span>LANÇAMENTOS</span></div><div class="admin-counter"><strong>${docs.reduce((n,e)=>n+(e.medidores||[]).length,0)}</strong><span>MEDIDORES / UCs</span></div></div>`;
+    const userDocs=usersSnap.docs.map(d=>d.data()||{});
+    // Usuário cadastrado = conta com e-mail. Sessões anônimas do Firebase
+    // não entram nesse número, evitando contar o mesmo aparelho/teste como
+    // vários usuários cadastrados.
+    const cadastrados=userDocs.filter(u=>String(u.email||'').trim()).length;
+    const ativos24h=userDocs.filter(u=>{
+      const email=String(u.email||'').trim();
+      const t=Number(u.ultimoAcessoEm||0);
+      return !!email && t && Date.now()-t<=24*60*60*1000;
+    }).length;
+    const acessosTotais=userDocs.reduce((n,u)=>n+Number(u.acessos||0),0);
+    if(box)box.innerHTML=`<div class="admin-counters"><div class="admin-counter"><strong>${cadastrados}</strong><span>USUÁRIOS CADASTRADOS</span></div><div class="admin-counter"><strong>${ativos24h}</strong><span>ATIVOS (24H)</span></div><div class="admin-counter"><strong>${admins.length+1}</strong><span>ADMINISTRADORES</span></div><div class="admin-counter"><strong>${acessosTotais}</strong><span>ACESSOS TOTAIS</span></div><div class="admin-counter"><strong>${docs.length}</strong><span>LANÇAMENTOS</span></div><div class="admin-counter"><strong>${docs.reduce((n,e)=>n+(e.medidores||[]).length,0)}</strong><span>MEDIDORES / UCs</span></div></div>`;
 
     if(adminList){
       adminList.innerHTML=`<div style="margin:10px 0 4px;font-weight:700">👥 Administradores autorizados</div>
