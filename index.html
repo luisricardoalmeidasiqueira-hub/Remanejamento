@@ -66,7 +66,9 @@
   .filtro-etapa-menu .sem-etapa{grid-column:1/-1}
 
   .entry{border-left:3px solid var(--accent);padding:12px 14px;margin-bottom:10px;font-family:-apple-system,system-ui,sans-serif}
+  .entry.editando{box-shadow:0 0 0 2px var(--accent)}
   .entry-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .entry-top-actions{display:flex;gap:6px;flex:0 0 auto}
   .entry-code{font-size:15px;font-weight:700;color:var(--accent)}
   .entry-date{font-size:12px;color:var(--text-dim);white-space:nowrap}
   .entry-meta{font-size:12.5px;color:var(--text-dim);margin-top:4px}
@@ -131,6 +133,23 @@
   .entry-del,.entry-stage-btn{background:var(--panel);border:1px solid var(--line);color:var(--red);border-radius:7px;font-size:12px;padding:6px 9px;cursor:pointer}
   .entry-del-top{padding:4px 7px;min-width:34px;font-size:15px;line-height:1;border-color:var(--red);flex:0 0 auto}
   .entry-stage-btn{color:var(--accent)}
+  .entry-edit-top{padding:4px 7px;min-width:34px;font-size:15px;line-height:1;background:var(--panel);border:1px solid var(--accent);color:var(--accent);border-radius:7px;cursor:pointer;flex:0 0 auto}
+
+  .edit-banner{display:none;margin-bottom:12px;padding:9px 12px;border-radius:8px;background:rgba(25,118,210,.12);border:1px solid var(--accent);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:700}
+  .cancel-edit-btn{display:none;width:100%;margin-top:8px;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-family:-apple-system,system-ui,sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+
+  .title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
+  .title-row h1{margin:0;min-width:0}
+  .title-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+  .admin-icon-btn{width:36px;height:32px;padding:0;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-size:15px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .admin-icon-btn:active{transform:scale(.95)}
+  .conexao{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-family:-apple-system,system-ui,sans-serif;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .conexao.conectado{color:#2e7d32;border-color:#a5d6a7;background:#eef8ef}
+  .conexao.conectando{color:#9a6b00;border-color:#f3d27a;background:#fff8e1}
+  .conexao.desconectado{color:var(--red);border-color:#f0b9ab;background:#fdf0ec}
+  .conexao.conectando .conexao-icon{animation:pisca 1s ease-in-out infinite}
+  @keyframes pisca{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){.conexao.conectando .conexao-icon{animation:none}}
 
   .cloud-status{font-family:-apple-system,system-ui,sans-serif;font-size:11px;margin-top:7px;text-align:center;color:var(--text-dim);min-height:14px}
   .cloud-status.online{color:#2e7d32}
@@ -146,7 +165,7 @@
     .stage-group{break-inside:avoid;page-break-inside:avoid;margin-bottom:16px}
     .stage-title{background:#eee !important;color:#000 !important;border:1px solid #999}
     .entry{break-inside:avoid;page-break-inside:avoid;border:1px solid #999 !important;border-left:3px solid #333 !important}
-    .meter-actions,.meter-tools,.entry-status-row{display:none !important}
+    .meter-actions,.meter-tools,.entry-status-row,.entry-edit-top{display:none !important}
     .meter-card{background:#fff;border:1px solid #bbb}
     body.print-stage-mode .stage-group{display:none !important}
     body.print-stage-mode .stage-group.print-include{display:block !important}
@@ -190,15 +209,15 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Remanejamento de Rota</h1>
+    <div class="title-row">
+      <h1>Remanejamento de Rota</h1>
+      <div class="title-actions">
+        <span class="conexao conectando" id="conexaoBadge" role="status" aria-live="polite" title="Firebase: Conectando"><span class="conexao-icon">🟡</span><span id="conexaoTexto">Conectando</span></span>
+        <button type="button" id="adminBtn" class="admin-icon-btn" title="Administração" aria-label="Administração">🔐</button>
+      </div>
+    </div>
     <p>Cliente ligado no lugar certo, mas com rota errada no sistema</p>
     <button type="button" class="share-app-btn" id="shareAppBtn">↗️ Compartilhar aplicativo</button>
-    <div class="developer-badge" aria-label="Desenvolvedor do aplicativo">
-      <div>👑 <b>DESENVOLVEDOR</b></div>
-      <div>Luís Ricardo de Almeida Siqueira</div>
-      <div class="developer-role">Administrador principal · acesso total</div>
-    </div>
-    <button type="button" id="adminBtn" class="share-app-btn admin-btn" style="display:block;margin-top:8px">🔐 Administração</button>
   </header>
 
   
@@ -219,7 +238,8 @@
   <div id="adminList"></div>
   <div id="adminRecords"></div>
 </div>
-<div class="card">
+<div class="card" id="formCard">
+    <div class="edit-banner" id="editBanner">✏️ Editando lançamento</div>
     <button type="button" class="toggle-etapas-btn" id="toggleEtapasBtn">Etapas ▾</button>
     <input type="hidden" id="rotaDestino" value="">
     <div class="etapa-opts" id="etapaOpts" style="display:none"></div>
@@ -255,6 +275,7 @@
     <textarea id="obs" placeholder="Detalhes adicionais (opcional)"></textarea>
 
     <button class="save-btn" id="saveBtn">💾 Salvar registro</button>
+    <button type="button" class="cancel-edit-btn" id="cancelEditBtn">✖ Cancelar edição</button>
     <div class="status-msg" id="statusMsg"></div>
     <div class="cloud-status" id="cloudStatus">Modo local — Firebase ainda não configurado.</div>
   </div>
@@ -349,7 +370,7 @@
 <script>
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
-const PWA_BUILD='20260922-final-01';
+const PWA_BUILD='20260923-cadeado-01';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -404,11 +425,33 @@ function setCloudStatus(text, kind=''){
   el.className='cloud-status'+(kind?' '+kind:'');
 }
 
+// Indicador no topo: ☁️ conectado · 🟡 conectando · 🚫 desconectado
+function setConexao(estado){
+  const badge=$('conexaoBadge'); if(!badge)return;
+  const mapa={
+    conectado:['☁️','Conectado'],
+    conectando:['🟡','Conectando'],
+    desconectado:['🚫','Desconectado']
+  };
+  const [icone,texto]=mapa[estado]||mapa.conectando;
+  badge.className='conexao '+(mapa[estado]?estado:'conectando');
+  badge.querySelector('.conexao-icon').textContent=icone;
+  $('conexaoTexto').textContent=texto;
+  badge.title='Firebase: '+texto;
+}
+
+function atualizarConexaoPorSnapshot(snap){
+  if(!navigator.onLine){ setConexao('desconectado'); return; }
+  setConexao(snap.metadata.fromCache?'conectando':'conectado');
+}
+
 async function initFirebase(){
   if(!firebaseReady){
     setCloudStatus('Modo local — Firebase ainda não configurado.');
+    setConexao('desconectado');
     return false;
   }
+  setConexao(navigator.onLine?'conectando':'desconectado');
   try{
     const appMod=await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js');
     const authMod=await import('https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js');
@@ -465,11 +508,16 @@ async function initFirebase(){
     normalizarRegistros();
     salvarLocal();
     renderEntries();
+    setConexao(primeiraCarga.metadata?.fromCache ? 'conectando' : 'conectado');
 
     firebaseUnsubscribe=fsMod.onSnapshot(
       fsMod.collection(firebaseDB,'remanejamentoRota'),
+      {includeMetadataChanges:true},
       snap=>{
+        atualizarConexaoPorSnapshot(snap);
         if(cloudApplying)return;
+        // Mudança só de conexão (sem registro novo/alterado): não redesenha a lista.
+        if(!snap.docChanges().length)return;
         // O snapshot inteiro substitui a lista local.
         // Portanto, um documento apagado no Firebase desaparece também
         // do aparelho, sem ser ressuscitado pelo localStorage.
@@ -480,6 +528,7 @@ async function initFirebase(){
       },
       err=>{
         console.error('Firebase snapshot',err);
+        setConexao('desconectado');
         setCloudStatus(
           '☁️ Firebase conectado, mas aguardando permissão do Firestore.',
           'offline'
@@ -493,6 +542,7 @@ async function initFirebase(){
     const code=err?.code||'sem-codigo';
     const message=err?.message||String(err)||'Erro desconhecido';
     setCloudStatus('🔴 Firebase: '+code+' — '+message,'offline');
+    setConexao('desconectado');
     return false;
   }
 }
@@ -723,8 +773,9 @@ async function sairAdministrador(){
 function atualizarAdminUI(){
   const btn=$('adminBtn');
   if(btn){
-    btn.textContent=isAdmin?'⚙️ Administração':'🔐 Administração';
-    btn.style.display='block';
+    btn.textContent=isAdmin?'⚙️':'🔐';
+    btn.title=isAdmin?'Administração (liberada)':'Administração';
+    btn.style.display='inline-flex';
   }
 }
 
@@ -865,6 +916,7 @@ async function renderAdminPanel(){
         try{
           await firebaseModules.fs.deleteDoc(firebaseModules.fs.doc(firebaseDB,'remanejamentoRota',btn.dataset.adminDelete));
           entries=entries.filter(e=>e.id!==btn.dataset.adminDelete);
+          if(editandoId===btn.dataset.adminDelete)cancelarEdicao();
           salvarLocal();
           renderEntries();
           await renderAdminPanel();
@@ -918,6 +970,8 @@ let selectedFotos = [];
 let dataRegistro = todayStr();
 let modalFotos = [];
 let modalIndex = 0;
+// ID do lançamento que está sendo editado (null = criando um novo).
+let editandoId = null;
 
 const $ = id => document.getElementById(id);
 
@@ -986,6 +1040,7 @@ $('etapaOpts').querySelectorAll('button').forEach(btn=>{
     $('rotaDestino').value = btn.dataset.etapa;
     $('etapaOpts').querySelectorAll('button').forEach(b=>b.classList.remove('selecionada'));
     btn.classList.add('selecionada');
+    if(editandoId) $('editBanner').textContent=`✏️ Editando lançamento — Etapa ${btn.dataset.etapa}`;
   });
 });
 
@@ -1076,6 +1131,120 @@ function limparFormulario(){
   $('toggleEtapasBtn').textContent='Etapas ▾';
   $('etapaOpts').querySelectorAll('button').forEach(b=>b.classList.remove('selecionada'));
 }
+
+/* ===== EDIÇÃO DE LANÇAMENTO ===== */
+function atualizarModoEdicaoUI(){
+  const editando=!!editandoId;
+  $('editBanner').style.display=editando?'block':'none';
+  $('cancelEditBtn').style.display=editando?'block':'none';
+  $('saveBtn').textContent=editando?'💾 Salvar alterações':'💾 Salvar registro';
+}
+
+function iniciarEdicao(id){
+  const entry=entries.find(e=>e.id===id);
+  if(!entry)return;
+  editandoId=id;
+
+  // Medidores já lançados + um campo vazio pronto para o novo.
+  medidorValores=(entry.medidores||[]).map(m=>m.numero);
+  medidorValores.push('');
+  renderMedidorRows();
+
+  dataRegistro=entry.dataRegistro||todayStr();
+  $('dataRegistro').value=dataRegistro;
+  $('vizinha').value=entry.vizinha||'';
+  $('livro').value=entry.livro||'';
+  $('rua').value=entry.rua||'';
+  $('obs').value=entry.obs||'';
+  selectedFotos=[...(entry.fotos||[])];
+  renderFotoPreview();
+
+  const etapa=etapaValorNormalizado(entry.rotaDestino);
+  $('rotaDestino').value=etapa;
+  $('etapaOpts').querySelectorAll('button').forEach(b=>b.classList.toggle('selecionada',b.dataset.etapa===etapa));
+  $('etapaOpts').style.display='grid';
+  $('toggleEtapasBtn').textContent='Fechar etapas ▴';
+
+  $('editBanner').textContent=etapa?`✏️ Editando lançamento — Etapa ${etapa}`:'✏️ Editando lançamento';
+  atualizarModoEdicaoUI();
+  $('statusMsg').textContent='';
+  renderEntries();
+  $('formCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function cancelarEdicao(){
+  editandoId=null;
+  limparFormulario();
+  atualizarModoEdicaoUI();
+  renderEntries();
+}
+
+async function salvarEdicao(dados){
+  const status=$('statusMsg');
+  const btn=$('saveBtn');
+  const entry=entries.find(e=>e.id===editandoId);
+  if(!entry){
+    cancelarEdicao();
+    status.textContent='Este lançamento não existe mais.';
+    status.style.color='var(--red)';
+    return;
+  }
+
+  // Mantém status/histórico dos medidores que já existiam;
+  // os números novos entram como "Pendente".
+  const antigos=[...(entry.medidores||[])];
+  const novosMedidores=dados.medidores.map((numero,i)=>{
+    const idx=antigos.findIndex(m=>m.numero===numero);
+    if(idx>=0) return antigos.splice(idx,1)[0];
+    return {
+      id:'m'+Date.now().toString(36)+i+Math.random().toString(36).slice(2,4),
+      numero,status:'pendente',statusEm:null,transferidoPara:null,origemId:null,origemData:null
+    };
+  });
+
+  const copia=JSON.parse(JSON.stringify(entry));
+  Object.assign(entry,{
+    medidores:novosMedidores,
+    dataRegistro:dados.data,
+    vizinha:dados.vizinha,
+    livro:dados.livro,
+    rotaDestino:dados.rotaDestino,
+    rua:dados.rua,
+    obs:dados.obs,
+    fotos:[...selectedFotos],
+    editadoEm:Date.now()
+  });
+
+  btn.disabled=true;
+  status.textContent='Salvando alterações...';
+  status.style.color='var(--text-dim)';
+
+  if(!salvarLocal()){
+    Object.assign(entry,copia);
+    btn.disabled=false;
+    status.textContent='Não foi possível salvar. Verifique o armazenamento do navegador.';
+    status.style.color='var(--red)';
+    return;
+  }
+
+  const okCloud=firebaseDB ? await salvarCloud(entry) : true;
+
+  editandoId=null;
+  limparFormulario();
+  atualizarModoEdicaoUI();
+  renderEntries();
+  btn.disabled=false;
+  if(okCloud){
+    status.textContent='Alterações salvas.';
+    status.style.color='var(--accent)';
+  }else{
+    status.textContent='Alterações salvas no aparelho, mas não no Firebase.';
+    status.style.color='var(--red)';
+  }
+  setTimeout(()=>status.textContent='',2500);
+}
+
+$('cancelEditBtn').addEventListener('click',cancelarEdicao);
 
 function lerDados(){
   try{
@@ -1278,11 +1447,14 @@ function renderEntries(){
     <section class="stage-group${incluirImpressao?' print-include':''}" data-stage-key="${escapeHtml(key)}">
       <div class="stage-title"><span>${escapeHtml(etapaLabel(key))}</span><span class="stage-count">${lista.length} lançamento${lista.length===1?'':'s'} · ${qtdMedidores} medidor${qtdMedidores===1?'':'es'}</span></div>
       ${lista.map(e=>`
-        <div class="entry">
+        <div class="entry${e.id===editandoId?' editando':''}">
           <div class="entry-top">
             <span class="entry-code">${e.medidores.length>1?'Medidores / UCs':'Medidor / UC'}</span>
             <span class="entry-date">${formatDateBR(e.dataRegistro)} · ${formatDateHora(e.criadoEm)}</span>
-            <button type="button" class="entry-del entry-del-top" data-action="excluir-registro" data-id="${escapeHtml(e.id)}" title="Excluir lançamento inteiro" aria-label="Excluir lançamento inteiro">🗑️</button>
+            <div class="entry-top-actions">
+              <button type="button" class="entry-edit-top" data-action="editar-registro" data-id="${escapeHtml(e.id)}" title="Editar lançamento" aria-label="Editar lançamento">✏️</button>
+              <button type="button" class="entry-del entry-del-top" data-action="excluir-registro" data-id="${escapeHtml(e.id)}" title="Excluir lançamento inteiro" aria-label="Excluir lançamento inteiro">🗑️</button>
+            </div>
           </div>
           <div class="entry-meta">
             ${(e.medidores||[]).map(m=>`
@@ -1334,6 +1506,10 @@ function renderEntries(){
   $('entriesList').querySelectorAll('[data-action]').forEach(btn=>{
     btn.addEventListener('click',async()=>{
       const action=btn.dataset.action;
+      if(action==='editar-registro'){
+        iniciarEdicao(btn.dataset.id);
+        return;
+      }
       if(action==='digitado'){
         const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
         entry.digitado=!entry.digitado; entry.digitadoEm=entry.digitado?Date.now():null;
@@ -1369,7 +1545,9 @@ function renderEntries(){
         if(!entryId){alert('Este lançamento não possui um ID válido no Firebase.');return;}
         const ok=await excluirCloud(entryId);
         if(!ok){alert('Não foi possível excluir no Firebase. O lançamento foi mantido.');return;}
-        entries=entries.filter(e=>e.id!==entry.id); salvarLocal(); renderEntries(); return;
+        entries=entries.filter(e=>e.id!==entry.id);
+        if(editandoId===entry.id){ editandoId=null; limparFormulario(); atualizarModoEdicaoUI(); }
+        salvarLocal(); renderEntries(); return;
       }
       setMedidorStatus(btn.dataset.id,btn.dataset.mid,action);
     });
@@ -1448,6 +1626,12 @@ $('saveBtn').addEventListener('click',()=>{
     status.style.color='var(--red)';
     $('etapaOpts').style.display='grid';
     $('toggleEtapasBtn').textContent='Fechar etapas ▴';
+    return;
+  }
+
+  // Modo edição: atualiza o lançamento existente em vez de criar outro.
+  if(editandoId){
+    salvarEdicao({medidores,data,vizinha,livro,rotaDestino,rua,obs});
     return;
   }
 
@@ -1558,6 +1742,9 @@ function lockAdminArea(){
 }
 setInterval(()=>{ if(isAdmin && adminUnlockExpired()) lockAdminArea(); },60000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden && isAdmin && adminUnlockExpired()) lockAdminArea(); });
+
+window.addEventListener('offline',()=>setConexao('desconectado'));
+window.addEventListener('online',()=>setConexao(firebaseDB?'conectando':'desconectado'));
 
 entries=lerDados();
 normalizarRegistros();
