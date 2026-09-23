@@ -31,6 +31,9 @@
   header p{margin:0;color:var(--text-dim);font-size:13px;font-family:-apple-system,system-ui,sans-serif}
   .share-app-btn{width:100%;margin-top:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--accent-dim);background:var(--panel-2);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer}
   .share-app-btn:active{transform:scale(.99)}
+  .header-actions{display:flex;gap:8px;margin-top:12px}
+  .header-actions .share-app-btn{margin-top:0;flex:1;min-width:0}
+  .share-app-btn:disabled{opacity:.6}
   .card,.entry{background:var(--panel);border:1px solid var(--line);border-radius:10px}
   .card{padding:16px;margin-bottom:16px}
   label{display:block;font-family:-apple-system,system-ui,sans-serif;font-size:12.5px;color:var(--text-dim);margin:14px 0 6px}
@@ -217,7 +220,10 @@
       </div>
     </div>
     <p>Cliente ligado no lugar certo, mas com rota errada no sistema</p>
-    <button type="button" class="share-app-btn" id="shareAppBtn">↗️ Compartilhar aplicativo</button>
+    <div class="header-actions">
+      <button type="button" class="share-app-btn" id="shareAppBtn">↗️ Compartilhar</button>
+      <button type="button" class="share-app-btn" id="updateAppBtn">🔄 Atualizar app</button>
+    </div>
   </header>
 
   
@@ -371,7 +377,7 @@
 <script>
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
-const PWA_BUILD='20260923-pin-01';
+const PWA_BUILD='20260923-atualizar-01';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -1586,6 +1592,51 @@ function renderEntries(){
     });
   });
 }
+
+function formularioTemDados(){
+  return medidorValores.some(v=>String(v).trim()) ||
+    ['vizinha','livro','rua','obs'].some(id=>$(id).value.trim()) ||
+    selectedFotos.length>0;
+}
+
+async function atualizarAplicativo(){
+  if(!navigator.onLine){
+    alert('Sem internet agora. Conecte-se e tente atualizar de novo.');
+    return;
+  }
+  if(formularioTemDados() && !confirm('Tem informação no formulário que ainda não foi salva. Atualizar mesmo assim? (Os registros já salvos não são afetados.)'))return;
+  const btn=$('updateAppBtn');
+  btn.disabled=true;
+  btn.textContent='⏳ Atualizando...';
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      for(const r of regs){ try{ await r.update(); }catch(e){} }
+    }
+    // Limpa só a cópia antiga do app. Os registros ficam no Firebase e no aparelho.
+    if(window.caches){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(err){ console.warn('Atualizar app:',err); }
+  const url=new URL(location.href);
+  url.searchParams.set('v',Date.now());
+  location.replace(url.toString());
+}
+$('updateAppBtn').addEventListener('click',atualizarAplicativo);
+
+// Depois de atualizar, tira o "?v=..." do endereço (para o link de compartilhar ficar limpo).
+try{
+  const u=new URL(location.href);
+  if(u.searchParams.has('v')){
+    u.searchParams.delete('v');
+    history.replaceState(null,'',u.pathname+(u.search||'')+u.hash);
+    const status=$('statusMsg');
+    status.textContent='Aplicativo atualizado ✓';
+    status.style.color='var(--accent)';
+    setTimeout(()=>status.textContent='',2500);
+  }
+}catch(e){}
 
 $('shareAppBtn').addEventListener('click', async ()=>{
   const shareData={
