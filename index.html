@@ -177,7 +177,7 @@
   .admin-lock-card h2{margin:0 0 6px;color:var(--accent);font-size:20px}
   .admin-lock-card p{margin:0 0 12px;color:var(--text-dim);font-size:12px}
   .admin-lock-card input{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--text);font-size:16px}
-  .admin-pin-input{font-size:18px!important;letter-spacing:.28em;text-align:center}
+  .admin-pin-input{font-size:18px!important;letter-spacing:.28em;text-align:center;-webkit-text-security:disc}
   .admin-field-label{display:block;margin:10px 0 5px;color:var(--text-dim);font-size:12px;font-weight:700}
   .admin-password-wrap{position:relative}
   .admin-password-wrap input{padding-right:48px}
@@ -329,7 +329,7 @@
     <p id="adminLockHint">Confirme seu acesso para abrir a administração.</p>
 
     <div id="adminPinArea">
-      <input class="admin-pin-input" id="adminPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="one-time-code" aria-label="PIN de 4 dígitos">
+      <input class="admin-pin-input" id="adminPinInput" type="text" name="pin-rapido" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" aria-label="PIN de 4 dígitos">
       <div class="admin-lock-actions">
         <button type="button" id="adminBiometricBtn">Face ID / biometria</button>
         <button type="button" class="primary-lock" id="adminPinBtn">Desbloquear</button>
@@ -371,7 +371,7 @@
 <script>
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
-const PWA_BUILD='20260923-faceid-01';
+const PWA_BUILD='20260923-pin-01';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -600,7 +600,9 @@ async function loginAdministrador(){
   $('adminPasswordInput').type='password';
   $('adminPasswordEye').textContent='👁️';
   $('adminLockMsg').textContent='';
-  $('adminLockHint').textContent=savedPin ? 'Use seu PIN de 4 dígitos ou a biometria deste aparelho.' : 'Primeiro acesso neste aparelho: entre com e-mail e senha para cadastrar o desbloqueio rápido.';
+  $('adminLockHint').textContent=savedPin
+    ? (bioReady ? 'Use o Face ID ou seu PIN de 4 dígitos.' : 'Digite seu PIN de 4 dígitos. Para usar Face ID, depois de entrar toque em "Ativar Face ID" no painel.')
+    : 'Primeiro acesso neste aparelho: entre com e-mail e senha para cadastrar o desbloqueio rápido.';
   $('adminPinArea').style.display=savedPin?'block':'none';
   $('adminPasswordArea').style.display=savedPin?'none':'block';
   $('adminPasswordBtn').style.display=savedPin?'block':'none';
@@ -1776,6 +1778,11 @@ $('adminBackToPinBtn').addEventListener('click',voltarParaPin);
 $('adminPasswordEye').addEventListener('click',alternarSenha);
 $('adminCancelBtn').addEventListener('click',()=>$('adminLock').classList.remove('open'));
 $('adminPinInput').addEventListener('keydown',e=>{if(e.key==='Enter')desbloquearPorPin();});
+// Se o iPhone tentar colar uma senha salva, fica só com números (máx. 4).
+$('adminPinInput').addEventListener('input',e=>{
+  const limpo=e.target.value.replace(/\D/g,'').slice(0,4);
+  if(e.target.value!==limpo)e.target.value=limpo;
+});
 $('adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')autenticarComSenha();});
 $('adminRefreshBtn').addEventListener('click',renderAdminPanel);
 $('addAdminBtn').addEventListener('click',adicionarAdministrador);
