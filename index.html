@@ -232,6 +232,7 @@
   <div id="adminSummary" class="cloud-status">Carregando...</div>
   <div class="export-actions">
     <button class="export-btn" id="adminRefreshBtn">🔄 Atualizar</button>
+    <button class="export-btn" id="faceIdBtn">🙂 Ativar Face ID neste aparelho</button>
     <button class="export-btn" id="addAdminBtn">➕ Adicionar administrador</button>
     <button class="export-btn" id="adminLogoutBtn">↩️ Sair da administração</button>
   </div>
@@ -370,7 +371,7 @@
 <script>
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
-const PWA_BUILD='20260923-cadeado-01';
+const PWA_BUILD='20260923-faceid-01';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -693,6 +694,7 @@ async function desbloquearPorPin(){
 async function abrirPainelAdmin(){
   isAdmin=true; atualizarAdminUI();
   $('adminPanel').style.display='block';
+  atualizarBotaoFaceId();
   setCloudStatus('☁️ Administrador conectado.','online');
   await renderAdminPanel();
 }
@@ -713,25 +715,44 @@ async function sha256(text){
 }
 function base64url(bytes){return btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function fromBase64url(str){str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4)str+='='; return Uint8Array.from(atob(str),c=>c.charCodeAt(0));}
-async function canUseWebAuthn(){return !!(window.PublicKeyCredential && navigator.credentials && isSecureContext);}
-async function hasBiometricCredential(){return !!localStorage.getItem('remanejamento-admin-webauthn-id');}
-async function registrarBiometria(){
-  if(!await canUseWebAuthn())return false;
+function canUseWebAuthnSync(){return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);}
+function temBiometria(){return !!localStorage.getItem('remanejamento-admin-webauthn-id');}
+async function canUseWebAuthn(){return canUseWebAuthnSync();}
+async function hasBiometricCredential(){return temBiometria();}
+
+// O iPhone só abre o Face ID se o pedido começar direto no toque,
+// por isso o pedido é feito antes de qualquer "await".
+function registrarBiometria(){
+  if(!canUseWebAuthnSync())return Promise.resolve(false);
+  let pedido;
   try{
     const challenge=crypto.getRandomValues(new Uint8Array(32));
     const userId=crypto.getRandomValues(new Uint8Array(16));
-    const cred=await navigator.credentials.create({publicKey:{challenge,rp:{name:'Remanejamento de Rota',id:location.hostname},user:{id:userId,name:PRIMARY_ADMIN_EMAIL,displayName:'Desenvolvedor'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'preferred',userVerification:'required'},timeout:60000}});
+    pedido=navigator.credentials.create({publicKey:{challenge,rp:{name:'Remanejamento de Rota',id:location.hostname},user:{id:userId,name:PRIMARY_ADMIN_EMAIL,displayName:'Desenvolvedor'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'preferred',userVerification:'required'},timeout:60000}});
+  }catch(err){console.warn('Biometria não configurada:',err);return Promise.resolve(false);}
+  return pedido.then(cred=>{
     if(!cred)return false;
     localStorage.setItem('remanejamento-admin-webauthn-id',base64url(cred.rawId));
     return true;
-  }catch(err){console.warn('Biometria não configurada:',err);return false;}
+  }).catch(err=>{console.warn('Biometria não configurada:',err);return false;});
 }
-async function desbloquearPorBiometria(){
-  if(!await canUseWebAuthn() || !await hasBiometricCredential()){ $('adminLockMsg').textContent='Biometria não disponível neste aparelho.'; return; }
+
+function desbloquearPorBiometria(){
+  if(!canUseWebAuthnSync() || !temBiometria()){
+    $('adminLockMsg').textContent='Face ID ainda não foi ativado neste aparelho.';
+    return Promise.resolve(false);
+  }
+  let pedido;
   try{
     const challenge=crypto.getRandomValues(new Uint8Array(32));
     const rawId=fromBase64url(localStorage.getItem('remanejamento-admin-webauthn-id'));
-    const cred=await navigator.credentials.get({publicKey:{challenge,allowCredentials:[{type:'public-key',id:rawId}],userVerification:'required',timeout:60000}});
+    pedido=navigator.credentials.get({publicKey:{challenge,allowCredentials:[{type:'public-key',id:rawId}],userVerification:'required',timeout:60000}});
+  }catch(err){
+    console.warn(err);
+    $('adminLockMsg').textContent='Não foi possível abrir o Face ID. Use o PIN.';
+    return Promise.resolve(false);
+  }
+  return pedido.then(async cred=>{
     if(!cred)throw new Error('Biometria não confirmada.');
     const usuarioAtual=firebaseModules?.authInstance?.currentUser||firebaseUser;
     if(usuarioAtual && usuarioAtual!==firebaseUser) firebaseUser=usuarioAtual;
@@ -741,7 +762,17 @@ async function desbloquearPorBiometria(){
     localStorage.setItem('remanejamento-admin-unlocked-at',String(Date.now()));
     $('adminLock').classList.remove('open');
     await abrirPainelAdmin();
-  }catch(err){console.warn(err);$('adminLockMsg').textContent='Não foi possível confirmar a biometria. Use o PIN ou e-mail + senha.';}
+    return true;
+  }).catch(err=>{
+    console.warn(err);
+    $('adminLockMsg').textContent='Não foi possível confirmar o Face ID. Use o PIN ou e-mail + senha.';
+    return false;
+  });
+}
+
+function atualizarBotaoFaceId(){
+  const b=$('faceIdBtn'); if(!b)return;
+  b.textContent=temBiometria()?'✅ Face ID ativado (refazer)':'🙂 Ativar Face ID neste aparelho';
 }
 
 async function authModFallbackAnonymous(){
@@ -1712,10 +1743,30 @@ $('printBtn').addEventListener('click',()=>{
 
 
 $('adminBtn').addEventListener('click',async()=>{
-  if(!isAdmin){ await loginAdministrador(); return; }
+  if(!isAdmin){
+    // Face ID já ativado: pede o rosto direto ao tocar no 🔐.
+    // Se cancelar, a tela de PIN continua aberta atrás.
+    if(canUseWebAuthnSync() && temBiometria() && firebaseModules?.authInstance){
+      desbloquearPorBiometria();
+    }
+    await loginAdministrador();
+    return;
+  }
   const panel=$('adminPanel');
   panel.style.display=panel.style.display==='none'?'block':'none';
-  if(panel.style.display==='block'){ localStorage.setItem('remanejamento-admin-unlocked-at',String(Date.now())); await renderAdminPanel(); }
+  if(panel.style.display==='block'){ localStorage.setItem('remanejamento-admin-unlocked-at',String(Date.now())); atualizarBotaoFaceId(); await renderAdminPanel(); }
+});
+$('faceIdBtn').addEventListener('click',()=>{
+  if(!canUseWebAuthnSync()){
+    alert('Este aparelho ou navegador não permite Face ID aqui. Abra o app pelo Safari ou pelo ícone na tela de início.');
+    return;
+  }
+  registrarBiometria().then(ok=>{
+    atualizarBotaoFaceId();
+    alert(ok
+      ? 'Face ID ativado! Da próxima vez, é só tocar no 🔐 lá em cima.'
+      : 'O Face ID não foi ativado. Tente de novo e confirme com o rosto quando o iPhone pedir.');
+  });
 });
 $('adminPinBtn').addEventListener('click',desbloquearPorPin);
 $('adminBiometricBtn').addEventListener('click',desbloquearPorBiometria);
