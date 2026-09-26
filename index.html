@@ -106,6 +106,12 @@
   .medidor-status.espelho{background:#1976d2;border-color:#1976d2}
   .medidor-status.nao-realizado{background:#d32f2f;border-color:#d32f2f}
   .medidor-status.concluido{background:#2e7d32;border-color:#2e7d32}
+  .medidor-status.recusado{background:#ef6c00;border-color:#ef6c00}
+  .recusa-info{font-size:11.5px;color:#b34700;margin-top:6px;font-weight:600}
+  .recusa-motivos{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+  .recusa-motivos button{padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer}
+  .recusa-motivos button.ativo{background:#fff3e0;border-color:#ef6c00;color:#b34700}
+  .resp-actions .danger{background:#ef6c00;border-color:#ef6c00;color:#fff}
   .data-registro{display:flex;gap:8px;align-items:center}
   .data-registro input{flex:1}
   .meter-card{margin-top:9px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
@@ -389,12 +395,32 @@
 <div class="resp-modal" id="respostasModal">
   <div class="resp-card">
     <h2>🔔 Respostas das suas solicitações</h2>
-    <div class="resp-sub">Aparece aqui quando um medidor que você pediu for marcado como Espelho, Não realizado ou Concluído.</div>
+    <div class="resp-sub">Aparece aqui quando um medidor que você pediu for marcado como Espelho, Não realizado, Concluído ou Recusado.</div>
     <div id="respostasLista"></div>
     <div class="resp-actions">
       <button type="button" class="primary" id="respostasLidasBtn">✓ Marcar como vistas</button>
       <button type="button" id="respostasFecharBtn">Fechar</button>
     </div>
+  </div>
+</div>
+
+<div class="resp-modal" id="recusaModal">
+  <div class="resp-card">
+    <h2 style="color:#b34700">⛔ Recusar medidor</h2>
+    <div class="resp-sub" id="recusaInfo"></div>
+    <div class="recusa-motivos" id="recusaMotivos">
+      <button type="button" data-motivo="Cidade diferente">Cidade diferente</button>
+      <button type="button" data-motivo="Número do medidor errado">Nº do medidor errado</button>
+      <button type="button" data-motivo="Medidor/UC vizinha errada">Vizinho errado</button>
+      <button type="button" data-motivo="">Outro</button>
+    </div>
+    <label for="recusaMotivo">Motivo da recusa <span class="required">*</span></label>
+    <textarea id="recusaMotivo" placeholder="Toque numa opção acima ou escreva o motivo"></textarea>
+    <div class="resp-actions">
+      <button type="button" class="danger" id="recusaConfirmarBtn">⛔ Recusar</button>
+      <button type="button" id="recusaCancelarBtn">Cancelar</button>
+    </div>
+    <div class="admin-lock-msg" id="recusaMsg"></div>
   </div>
 </div>
 
@@ -410,7 +436,7 @@
 <script>
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
-const PWA_BUILD='20260926-solicitante-01';
+const PWA_BUILD='20260926-recusa-01';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -1070,7 +1096,7 @@ function escapeHtml(value){
 /* ===== SOLICITADO POR + RESPOSTAS ===== */
 const CHAVE_MEU_NOME='remanejamento-meu-nome';
 const CHAVE_RESP_LIDAS='remanejamento-respostas-lidas';
-const STATUS_RESPOSTA=['espelho','nao-realizado','concluido'];
+const STATUS_RESPOSTA=['espelho','nao-realizado','concluido','recusado'];
 
 function normNome(s){
   return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
@@ -1103,11 +1129,12 @@ function coletarRespostas(){
   return lista.sort((a,b)=>Number(b.m.statusEm)-Number(a.m.statusEm));
 }
 function renderRespostas(lista=coletarRespostas()){
-  const icone={'espelho':'🔵','nao-realizado':'🔴','concluido':'🟢'};
+  const icone={'espelho':'🔵','nao-realizado':'🔴','concluido':'🟢','recusado':'⛔'};
   $('respostasLista').innerHTML=lista.length ? lista.map(r=>`
     <div class="resp-item${r.nova?' nova':''}">
       <div><b>${icone[r.m.status]||''} ${escapeHtml(statusLabel(r.m.status))}</b>${r.nova?' · <span class="resp-nova-tag">nova</span>':''}</div>
       <div>Medidor / UC <b>${escapeHtml(r.m.numero)}</b></div>
+      ${r.m.status==='recusado'&&r.m.motivoRecusa?`<div class="recusa-info">Motivo: ${escapeHtml(r.m.motivoRecusa)}</div>`:''}
       <div class="small">${escapeHtml(etapaLabel(r.entry.rotaDestino))}${r.entry.rua?' · '+escapeHtml(r.entry.rua):''} · ${formatDateHora(r.m.statusEm)}</div>
       ${r.m.transferidoPara?`<div class="small">↪ Transferido para ${formatDateBR(r.m.transferidoPara)}</div>`:''}
     </div>`).join('') : '<div class="empty">Nenhuma resposta ainda.</div>';
@@ -1145,6 +1172,51 @@ $('respostasLidasBtn').addEventListener('click',()=>{ marcarRespostasVistas(); $
 $('respostasFecharBtn').addEventListener('click',()=>$('respostasModal').classList.remove('open'));
 $('respostasModal').addEventListener('click',e=>{ if(e.target.id==='respostasModal')$('respostasModal').classList.remove('open'); });
 $('solicitadoPor').value=meuNome();
+
+/* ===== RECUSA COM MOTIVO ===== */
+let recusaAlvo=null;
+function abrirRecusa(entryId,mid){
+  const entry=entries.find(e=>e.id===entryId);
+  const m=entry?.medidores.find(x=>x.id===mid);
+  if(!entry||!m)return;
+  recusaAlvo={entryId,mid};
+  $('recusaInfo').textContent=`Medidor / UC ${m.numero} · ${etapaLabel(entry.rotaDestino)}${entry.solicitadoPor?' · pedido por '+entry.solicitadoPor:''}`;
+  $('recusaMotivo').value=m.status==='recusado'?(m.motivoRecusa||''):'';
+  $('recusaMotivos').querySelectorAll('button').forEach(b=>b.classList.toggle('ativo',!!b.dataset.motivo && b.dataset.motivo===$('recusaMotivo').value));
+  $('recusaMsg').textContent='';
+  $('recusaModal').classList.add('open');
+}
+function fecharRecusa(){
+  recusaAlvo=null;
+  $('recusaModal').classList.remove('open');
+}
+async function confirmarRecusa(){
+  const motivo=$('recusaMotivo').value.trim();
+  if(!motivo){ $('recusaMsg').textContent='Escolha ou escreva o motivo da recusa.'; return; }
+  const entry=entries.find(e=>e.id===recusaAlvo?.entryId);
+  const m=entry?.medidores.find(x=>x.id===recusaAlvo?.mid);
+  if(!entry||!m){ fecharRecusa(); return; }
+  m.status='recusado';
+  m.motivoRecusa=motivo;
+  m.statusEm=Date.now();
+  m.respondidoPor=firebaseUser?.uid||null;
+  fecharRecusa();
+  salvarLocal();
+  await salvarCloud(entry);
+  renderEntries();
+}
+$('recusaMotivos').querySelectorAll('button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    $('recusaMotivos').querySelectorAll('button').forEach(x=>x.classList.remove('ativo'));
+    b.classList.add('ativo');
+    $('recusaMotivo').value=b.dataset.motivo;
+    $('recusaMsg').textContent='';
+    if(!b.dataset.motivo)$('recusaMotivo').focus();
+  });
+});
+$('recusaConfirmarBtn').addEventListener('click',confirmarRecusa);
+$('recusaCancelarBtn').addEventListener('click',fecharRecusa);
+$('recusaModal').addEventListener('click',e=>{ if(e.target.id==='recusaModal')fecharRecusa(); });
 
 function renderMedidorRows(){
   $('medidorList').innerHTML = medidorValores.map((val,i)=>`
@@ -1444,7 +1516,8 @@ function normalizarMedidores(e){
       transferidoPara:m.transferidoPara||null,
       origemId:m.origemId||null,
       origemData:m.origemData||null,
-      respondidoPor:m.respondidoPor||null
+      respondidoPor:m.respondidoPor||null,
+      motivoRecusa:m.motivoRecusa||null
     };
   }).filter(m=>m.numero);
 }
@@ -1469,10 +1542,10 @@ function formatDateBR(iso){
   return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso;
 }
 function statusLabel(status){
-  return status==='espelho'?'Espelho':status==='nao-realizado'?'Não realizado':status==='concluido'?'Concluído':'Pendente';
+  return status==='espelho'?'Espelho':status==='nao-realizado'?'Não realizado':status==='concluido'?'Concluído':status==='recusado'?'Recusado':'Pendente';
 }
 function statusClass(status){
-  return status==='espelho'?'espelho':status==='nao-realizado'?'nao-realizado':status==='concluido'?'concluido':'';
+  return status==='espelho'?'espelho':status==='nao-realizado'?'nao-realizado':status==='concluido'?'concluido':status==='recusado'?'recusado':'';
 }
 function proximoMes(iso){
   const d=new Date((iso||todayStr())+'T12:00:00');
@@ -1486,6 +1559,7 @@ function setMedidorStatus(entryId,medidorId,status){
   m.status=status;
   m.statusEm=Date.now();
   m.respondidoPor=firebaseUser?.uid||null;
+  if(status!=='recusado')m.motivoRecusa=null;
   salvarLocal();
   salvarCloud(entry);
   renderEntries();
@@ -1494,7 +1568,7 @@ function transferirMedidor(entryId,medidorId){
   const entry=entries.find(e=>e.id===entryId);
   const m=entry?.medidores.find(x=>x.id===medidorId);
   if(!entry||!m)return;
-  if(m.status==='concluido')return;
+  if(m.status==='concluido' || m.status==='recusado')return;
   const destino=proximoMes(entry.dataRegistro);
   m.transferidoPara=destino;
   if(m.status==='pendente')m.status='nao-realizado';
@@ -1623,13 +1697,15 @@ function renderEntries(){
                   <span class="meter-num">${escapeHtml(m.numero)}</span>
                   <span class="meter-status-text">${statusLabel(m.status)}</span>
                 </div>
+                ${m.status==='recusado'&&m.motivoRecusa?`<div class="recusa-info">⛔ Motivo: ${escapeHtml(m.motivoRecusa)}</div>`:''}
                 ${m.transferidoPara?`<div class="transfer-info">↪ Transferido para ${formatDateBR(m.transferidoPara)}</div>`:''}
                 ${m.origemData?`<div class="history-note">↩ Pendência transferida de ${formatDateBR(m.origemData)}</div>`:''}
                 <div class="meter-actions">
                   <button data-action="espelho" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">🔵 Espelho</button>
                   <button data-action="nao-realizado" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">🔴 Não realizado</button>
                   <button data-action="concluido" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">🟢 Concluído</button>
-                  ${m.status!=='concluido'&&!m.transferidoPara?`<button data-action="transferir" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">📅 Próximo mês</button>`:''}
+                  <button data-action="recusar" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">⛔ Recusar</button>
+                  ${m.status!=='concluido'&&m.status!=='recusado'&&!m.transferidoPara?`<button data-action="transferir" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">📅 Próximo mês</button>`:''}
                 </div>
                 <div class="meter-tools">
                   <button type="button" class="meter-tool save" title="Salvar marcação" aria-label="Salvar marcação" data-action="salvar-marcacao" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">💾</button>
@@ -1665,6 +1741,10 @@ function renderEntries(){
   $('entriesList').querySelectorAll('[data-action]').forEach(btn=>{
     btn.addEventListener('click',async()=>{
       const action=btn.dataset.action;
+      if(action==='recusar'){
+        abrirRecusa(btn.dataset.id,btn.dataset.mid);
+        return;
+      }
       if(action==='editar-registro'){
         iniciarEdicao(btn.dataset.id);
         return;
@@ -1686,7 +1766,7 @@ function renderEntries(){
       if(action==='excluir-marcacao'){
         const entry=entries.find(e=>e.id===btn.dataset.id); const m=entry?.medidores.find(x=>x.id===btn.dataset.mid); if(!entry||!m)return;
         if(!window.confirm('Excluir somente a marcação deste medidor? O número e o histórico serão mantidos.'))return;
-        m.status='pendente'; m.statusEm=null; m.transferidoPara=null; m.respondidoPor=null; salvarLocal(); await salvarCloud(entry); renderEntries(); return;
+        m.status='pendente'; m.statusEm=null; m.transferidoPara=null; m.respondidoPor=null; m.motivoRecusa=null; salvarLocal(); await salvarCloud(entry); renderEntries(); return;
       }
       if(action==='definir-etapa'){
         const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
@@ -1900,18 +1980,18 @@ function exportarCSV(){
   const registros=getFiltradas();
   if(!registros.length)return;
   const cabecalho=[
-    'Etapa','Solicitado por','Número do medidor / UC','Status','UC vizinha','Número do livro','Rua','Data do registro',
+    'Etapa','Solicitado por','Número do medidor / UC','Status','Motivo da recusa','UC vizinha','Número do livro','Rua','Data do registro',
     'Observações','Lançado em','Qtd. fotos','Digitado','Digitado em','Transferido para','Origem'
   ];
   const linhas=[];
   [...registros].sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0)).forEach(e=>{
     const medidores=e.medidores||[];
     if(!medidores.length){
-      linhas.push([e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa',e.solicitadoPor||'','', '',e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',formatDateHora(e.criadoEm),e.fotos?.length||0,e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'','','']);
+      linhas.push([e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa',e.solicitadoPor||'','', '','',e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',formatDateHora(e.criadoEm),e.fotos?.length||0,e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'','','']);
       return;
     }
     medidores.forEach(m=>linhas.push([
-      e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa',e.solicitadoPor||'',m.numero||'',statusLabel(m.status),e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',
+      e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa',e.solicitadoPor||'',m.numero||'',statusLabel(m.status),m.status==='recusado'?(m.motivoRecusa||''):'',e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',
       formatDateHora(e.criadoEm),e.fotos?.length||0,e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'',m.transferidoPara?formatDateBR(m.transferidoPara):'',m.origemData?formatDateBR(m.origemData):''
     ]));
   });
