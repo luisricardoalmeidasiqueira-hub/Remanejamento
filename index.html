@@ -146,6 +146,22 @@
   .title-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
   .admin-icon-btn{width:36px;height:32px;padding:0;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-size:15px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
   .admin-icon-btn:active{transform:scale(.95)}
+  .resp-btn{position:relative}
+  .resp-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d32f2f;color:#fff;font-family:-apple-system,system-ui,sans-serif;font-size:11px;font-weight:800;line-height:18px;text-align:center;display:none}
+  .resp-banner{display:none;width:100%;margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid #f3d27a;background:#fff8e1;color:#7a5600;font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
+  .resp-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:1000;align-items:flex-end;justify-content:center;padding:18px;font-family:-apple-system,system-ui,sans-serif}
+  .resp-modal.open{display:flex}
+  .resp-card{width:min(480px,100%);max-height:80vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.2)}
+  .resp-card h2{margin:0 0 4px;color:var(--accent);font-size:18px}
+  .resp-sub{color:var(--text-dim);font-size:12px;margin-bottom:6px}
+  .resp-item{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);margin:8px 0;font-size:13px;color:var(--text)}
+  .resp-item.nova{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+  .resp-item .small{color:var(--text-dim);font-size:11.5px;margin-top:3px}
+  .resp-nova-tag{color:var(--accent);font-weight:800}
+  .resp-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .resp-actions button{padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-weight:700;cursor:pointer}
+  .resp-actions .primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .required{color:var(--red);font-weight:700}
   .conexao{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-family:-apple-system,system-ui,sans-serif;font-size:11.5px;font-weight:700;white-space:nowrap}
   .conexao.conectado{color:#2e7d32;border-color:#a5d6a7;background:#eef8ef}
   .conexao.conectando{color:#9a6b00;border-color:#f3d27a;background:#fff8e1}
@@ -216,6 +232,7 @@
       <h1>Remanejamento de Rota</h1>
       <div class="title-actions">
         <span class="conexao conectando" id="conexaoBadge" role="status" aria-live="polite" title="Firebase: Conectando"><span class="conexao-icon">🟡</span><span id="conexaoTexto">Conectando</span></span>
+        <button type="button" id="respostasBtn" class="admin-icon-btn resp-btn" title="Respostas" aria-label="Respostas das suas solicitações" style="display:none">🔔<span class="resp-badge" id="respostasBadge"></span></button>
         <button type="button" id="adminBtn" class="admin-icon-btn" title="Administração" aria-label="Administração">🔐</button>
       </div>
     </div>
@@ -224,6 +241,7 @@
       <button type="button" class="share-app-btn" id="shareAppBtn">↗️ Compartilhar</button>
       <button type="button" class="share-app-btn" id="updateAppBtn">🔄 Atualizar app</button>
     </div>
+    <button type="button" class="resp-banner" id="respostasBanner"></button>
   </header>
 
   
@@ -250,6 +268,9 @@
     <button type="button" class="toggle-etapas-btn" id="toggleEtapasBtn">Etapas ▾</button>
     <input type="hidden" id="rotaDestino" value="">
     <div class="etapa-opts" id="etapaOpts" style="display:none"></div>
+
+    <label for="solicitadoPor" style="margin-top:14px">Solicitado por <span class="required">*</span></label>
+    <input type="text" id="solicitadoPor" placeholder="Nome de quem está pedindo" autocomplete="off" autocapitalize="words">
 
     <label>Número do medidor / UC</label>
     <div id="medidorList"></div>
@@ -365,6 +386,18 @@
   </div>
 </div>
 
+<div class="resp-modal" id="respostasModal">
+  <div class="resp-card">
+    <h2>🔔 Respostas das suas solicitações</h2>
+    <div class="resp-sub">Aparece aqui quando um medidor que você pediu for marcado como Espelho, Não realizado ou Concluído.</div>
+    <div id="respostasLista"></div>
+    <div class="resp-actions">
+      <button type="button" class="primary" id="respostasLidasBtn">✓ Marcar como vistas</button>
+      <button type="button" id="respostasFecharBtn">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="foto-modal" id="fotoModal">
   <button class="foto-modal-close" id="fotoModalClose">×</button>
   <img id="fotoModalImg" src="" alt="Foto">
@@ -377,7 +410,7 @@
 <script>
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
-const PWA_BUILD='20260923-atualizar-01';
+const PWA_BUILD='20260926-solicitante-01';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -923,7 +956,7 @@ async function renderAdminPanel(){
       ${ordenados.map(e=>`
         <div class="admin-record">
           <div><b>${escapeHtml((e.medidores||[]).map(m=>m.numero).join(' · ')||'Sem medidor/UC')}</b></div>
-          <div class="small">${escapeHtml(e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa')} · ${escapeHtml(e.dataRegistro||'')}</div>
+          <div class="small">${escapeHtml(e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa')} · ${escapeHtml(e.dataRegistro||'')}${e.solicitadoPor?' · 👤 '+escapeHtml(e.solicitadoPor):''}</div>
           <button type="button" data-admin-delete="${escapeHtml(e.id)}">🗑️ Excluir registro inteiro</button>
         </div>
       `).join('')}
@@ -1033,6 +1066,85 @@ function escapeHtml(value){
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
   }[ch]));
 }
+
+/* ===== SOLICITADO POR + RESPOSTAS ===== */
+const CHAVE_MEU_NOME='remanejamento-meu-nome';
+const CHAVE_RESP_LIDAS='remanejamento-respostas-lidas';
+const STATUS_RESPOSTA=['espelho','nao-realizado','concluido'];
+
+function normNome(s){
+  return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+}
+function meuNome(){ try{ return localStorage.getItem(CHAVE_MEU_NOME)||''; }catch(e){ return ''; } }
+
+// Solicitação "minha": feita neste aparelho ou com o mesmo nome que eu uso.
+function ehMinha(e){
+  const uid=firebaseUser?.uid;
+  if(uid && e.solicitanteUid===uid)return true;
+  const n=normNome(meuNome());
+  return !!n && normNome(e.solicitadoPor)===n;
+}
+function lerLidas(){
+  try{ return JSON.parse(localStorage.getItem(CHAVE_RESP_LIDAS)||'{}')||{}; }catch(e){ return {}; }
+}
+function coletarRespostas(){
+  const lidas=lerLidas();
+  const uid=firebaseUser?.uid||null;
+  const lista=[];
+  entries.forEach(e=>{
+    if(!ehMinha(e))return;
+    (e.medidores||[]).forEach(m=>{
+      if(!STATUS_RESPOSTA.includes(m.status) || !m.statusEm)return;
+      if(uid && m.respondidoPor===uid)return; // marcação feita por mim mesmo
+      const chave=e.id+':'+m.id;
+      lista.push({entry:e,m,chave,nova:Number(lidas[chave]||0)<Number(m.statusEm)});
+    });
+  });
+  return lista.sort((a,b)=>Number(b.m.statusEm)-Number(a.m.statusEm));
+}
+function renderRespostas(lista=coletarRespostas()){
+  const icone={'espelho':'🔵','nao-realizado':'🔴','concluido':'🟢'};
+  $('respostasLista').innerHTML=lista.length ? lista.map(r=>`
+    <div class="resp-item${r.nova?' nova':''}">
+      <div><b>${icone[r.m.status]||''} ${escapeHtml(statusLabel(r.m.status))}</b>${r.nova?' · <span class="resp-nova-tag">nova</span>':''}</div>
+      <div>Medidor / UC <b>${escapeHtml(r.m.numero)}</b></div>
+      <div class="small">${escapeHtml(etapaLabel(r.entry.rotaDestino))}${r.entry.rua?' · '+escapeHtml(r.entry.rua):''} · ${formatDateHora(r.m.statusEm)}</div>
+      ${r.m.transferidoPara?`<div class="small">↪ Transferido para ${formatDateBR(r.m.transferidoPara)}</div>`:''}
+    </div>`).join('') : '<div class="empty">Nenhuma resposta ainda.</div>';
+}
+function atualizarRespostasUI(){
+  const btn=$('respostasBtn'); if(!btn)return;
+  const lista=coletarRespostas();
+  const novas=lista.filter(r=>r.nova).length;
+  btn.style.display=entries.some(ehMinha)?'inline-flex':'none';
+  const badge=$('respostasBadge');
+  badge.textContent=novas>9?'9+':String(novas);
+  badge.style.display=novas?'block':'none';
+  const banner=$('respostasBanner');
+  if(novas){
+    banner.textContent=`🔔 ${novas} resposta${novas===1?' nova':'s novas'} das suas solicitações — toque para ver`;
+    banner.style.display='block';
+  }else{
+    banner.style.display='none';
+  }
+  if($('respostasModal').classList.contains('open'))renderRespostas(lista);
+}
+function abrirRespostas(){
+  renderRespostas();
+  $('respostasModal').classList.add('open');
+}
+function marcarRespostasVistas(){
+  const lidas=lerLidas();
+  coletarRespostas().forEach(r=>{ lidas[r.chave]=r.m.statusEm; });
+  try{ localStorage.setItem(CHAVE_RESP_LIDAS,JSON.stringify(lidas)); }catch(e){}
+  atualizarRespostasUI();
+}
+$('respostasBtn').addEventListener('click',abrirRespostas);
+$('respostasBanner').addEventListener('click',abrirRespostas);
+$('respostasLidasBtn').addEventListener('click',()=>{ marcarRespostasVistas(); $('respostasModal').classList.remove('open'); });
+$('respostasFecharBtn').addEventListener('click',()=>$('respostasModal').classList.remove('open'));
+$('respostasModal').addEventListener('click',e=>{ if(e.target.id==='respostasModal')$('respostasModal').classList.remove('open'); });
+$('solicitadoPor').value=meuNome();
 
 function renderMedidorRows(){
   $('medidorList').innerHTML = medidorValores.map((val,i)=>`
@@ -1159,6 +1271,7 @@ $('fotoModalNext').addEventListener('click',()=>{
 
 function limparFormulario(){
   medidorValores=['']; renderMedidorRows();
+  $('solicitadoPor').value=meuNome();
   dataRegistro=todayStr();
   $('dataRegistro').value=dataRegistro;
   $('vizinha').value='';
@@ -1191,6 +1304,7 @@ function iniciarEdicao(id){
 
   dataRegistro=entry.dataRegistro||todayStr();
   $('dataRegistro').value=dataRegistro;
+  $('solicitadoPor').value=entry.solicitadoPor||'';
   $('vizinha').value=entry.vizinha||'';
   $('livro').value=entry.livro||'';
   $('rua').value=entry.rua||'';
@@ -1244,6 +1358,7 @@ async function salvarEdicao(dados){
   const copia=JSON.parse(JSON.stringify(entry));
   Object.assign(entry,{
     medidores:novosMedidores,
+    solicitadoPor:dados.solicitadoPor,
     dataRegistro:dados.data,
     vizinha:dados.vizinha,
     livro:dados.livro,
@@ -1328,7 +1443,8 @@ function normalizarMedidores(e){
       statusEm:m.statusEm||null,
       transferidoPara:m.transferidoPara||null,
       origemId:m.origemId||null,
-      origemData:m.origemData||null
+      origemData:m.origemData||null,
+      respondidoPor:m.respondidoPor||null
     };
   }).filter(m=>m.numero);
 }
@@ -1369,6 +1485,7 @@ function setMedidorStatus(entryId,medidorId,status){
   if(!m)return;
   m.status=status;
   m.statusEm=Date.now();
+  m.respondidoPor=firebaseUser?.uid||null;
   salvarLocal();
   salvarCloud(entry);
   renderEntries();
@@ -1382,6 +1499,7 @@ function transferirMedidor(entryId,medidorId){
   m.transferidoPara=destino;
   if(m.status==='pendente')m.status='nao-realizado';
   m.statusEm=Date.now();
+  m.respondidoPor=firebaseUser?.uid||null;
 
   const novo={
     id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),
@@ -1441,7 +1559,7 @@ function entryMatchesSearch(e,termo){
   if(!termo)return true;
   const etapaExata=etapaBuscaExata(termo);
   if(etapaExata!==null)return etapaValorNormalizado(e.rotaDestino)===String(etapaExata);
-  const base=[e.rotaDestino,e.rua,e.vizinha,e.livro,e.dataRegistro,e.obs].join(' ').toLowerCase();
+  const base=[e.rotaDestino,e.rua,e.vizinha,e.livro,e.dataRegistro,e.obs,e.solicitadoPor].join(' ').toLowerCase();
   const meds=(e.medidores||[]).map(m=>m.numero).join(' ').toLowerCase();
   return base.includes(termo)||meds.includes(termo);
 }
@@ -1455,6 +1573,7 @@ function getFiltradas(){
 }
 
 function renderEntries(){
+  atualizarRespostasUI();
   const filtradas=getFiltradas();
   const termo=filtroAtual.trim().toLowerCase();
   const etapaBusca=etapaBuscaExata(termo);
@@ -1495,6 +1614,7 @@ function renderEntries(){
               <button type="button" class="entry-del entry-del-top" data-action="excluir-registro" data-id="${escapeHtml(e.id)}" title="Excluir lançamento inteiro" aria-label="Excluir lançamento inteiro">🗑️</button>
             </div>
           </div>
+          ${e.solicitadoPor?`<div class="entry-meta">👤 Solicitado por <strong>${escapeHtml(e.solicitadoPor)}</strong></div>`:''}
           <div class="entry-meta">
             ${(e.medidores||[]).map(m=>`
               <div class="meter-card">
@@ -1566,7 +1686,7 @@ function renderEntries(){
       if(action==='excluir-marcacao'){
         const entry=entries.find(e=>e.id===btn.dataset.id); const m=entry?.medidores.find(x=>x.id===btn.dataset.mid); if(!entry||!m)return;
         if(!window.confirm('Excluir somente a marcação deste medidor? O número e o histórico serão mantidos.'))return;
-        m.status='pendente'; m.statusEm=null; m.transferidoPara=null; salvarLocal(); await salvarCloud(entry); renderEntries(); return;
+        m.status='pendente'; m.statusEm=null; m.transferidoPara=null; m.respondidoPor=null; salvarLocal(); await salvarCloud(entry); renderEntries(); return;
       }
       if(action==='definir-etapa'){
         const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
@@ -1713,11 +1833,25 @@ $('saveBtn').addEventListener('click',()=>{
     return;
   }
 
-  // Modo edição: atualiza o lançamento existente em vez de criar outro.
-  if(editandoId){
-    salvarEdicao({medidores,data,vizinha,livro,rotaDestino,rua,obs});
+  // SOLICITADO POR: obrigatório.
+  const solicitadoPor=$('solicitadoPor').value.trim().replace(/\s+/g,' ');
+  if(!solicitadoPor){
+    status.textContent='Preencha "Solicitado por" antes de salvar.';
+    status.style.color='var(--red)';
+    $('solicitadoPor').scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(()=>$('solicitadoPor').focus(),300);
     return;
   }
+
+  // Modo edição: atualiza o lançamento existente em vez de criar outro.
+  if(editandoId){
+    salvarEdicao({medidores,data,vizinha,livro,rotaDestino,rua,obs,solicitadoPor});
+    return;
+  }
+
+  // Guarda o nome neste aparelho: preenche sozinho da próxima vez
+  // e serve para mostrar as respostas das suas solicitações.
+  try{ localStorage.setItem(CHAVE_MEU_NOME,solicitadoPor); }catch(e){}
 
   btn.disabled=true;
   status.textContent='Salvando...';
@@ -1730,6 +1864,8 @@ $('saveBtn').addEventListener('click',()=>{
       numero,status:'pendente',statusEm:null,transferidoPara:null,origemId:null,origemData:null
     })),
     dataRegistro:data,
+    solicitadoPor,
+    solicitanteUid:firebaseUser?.uid||null,
     vizinha,livro,rotaDestino,rua,obs,
     fotos:[...selectedFotos],
     digitado:false,digitadoEm:null,criadoEm:Date.now()
@@ -1764,18 +1900,18 @@ function exportarCSV(){
   const registros=getFiltradas();
   if(!registros.length)return;
   const cabecalho=[
-    'Etapa','Número do medidor / UC','Status','UC vizinha','Número do livro','Rua','Data do registro',
+    'Etapa','Solicitado por','Número do medidor / UC','Status','UC vizinha','Número do livro','Rua','Data do registro',
     'Observações','Lançado em','Qtd. fotos','Digitado','Digitado em','Transferido para','Origem'
   ];
   const linhas=[];
   [...registros].sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0)).forEach(e=>{
     const medidores=e.medidores||[];
     if(!medidores.length){
-      linhas.push([e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa','', '',e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',formatDateHora(e.criadoEm),e.fotos?.length||0,e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'','','']);
+      linhas.push([e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa',e.solicitadoPor||'','', '',e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',formatDateHora(e.criadoEm),e.fotos?.length||0,e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'','','']);
       return;
     }
     medidores.forEach(m=>linhas.push([
-      e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa',m.numero||'',statusLabel(m.status),e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',
+      e.rotaDestino?`Etapa ${e.rotaDestino}`:'Sem etapa',e.solicitadoPor||'',m.numero||'',statusLabel(m.status),e.vizinha||'',e.livro||'',e.rua||'',e.dataRegistro||'',e.obs||'',
       formatDateHora(e.criadoEm),e.fotos?.length||0,e.digitado?'Sim':'Não',e.digitado?formatDateHora(e.digitadoEm):'',m.transferidoPara?formatDateBR(m.transferidoPara):'',m.origemData?formatDateBR(m.origemData):''
     ]));
   });
