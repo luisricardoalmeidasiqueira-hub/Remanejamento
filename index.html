@@ -440,7 +440,7 @@
   <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
   <div id="entriesList"></div>
 
-  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.4 · 30/09/2026</span></footer>
+  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.5 · 30/09/2026</span></footer>
 </div>
 
 <div class="admin-lock" id="adminLock">
@@ -484,9 +484,8 @@
     <h2>🔔 Respostas das suas solicitações</h2>
     <div class="resp-sub">Aparece aqui quando um medidor que você pediu for marcado como Espelho, Não realizado, Concluído ou Recusado.</div>
     <div id="respostasLista"></div>
-    <div class="resp-actions">
-      <button type="button" class="primary" id="respostasLidasBtn">✓ Marcar como vistas</button>
-      <button type="button" id="respostasFecharBtn">Fechar</button>
+    <div class="resp-actions" style="grid-template-columns:1fr">
+      <button type="button" class="primary" id="respostasFecharBtn">OK</button>
     </div>
   </div>
 </div>
@@ -546,7 +545,7 @@
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
 // VERSÃO DO APP: mude aqui a cada publicação (aparece no rodapé).
-const APP_VERSAO='2.4';
+const APP_VERSAO='2.5';
 const APP_VERSAO_DATA='30/09/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20260930';
 if('serviceWorker' in navigator){
@@ -1328,9 +1327,18 @@ function atualizarRespostasUI(){
   }
   if($('respostasModal').classList.contains('open'))renderRespostas(lista);
 }
+// Abriu a lista = leu. Tudo fica marcado como visto na hora:
+// o número vermelho e a faixa amarela somem e não voltam mais para essas respostas.
+// (O destaque "nova" continua na lista até fechar, para você ver o que chegou.)
 function abrirRespostas(){
-  renderRespostas();
+  const lista=coletarRespostas();
+  renderRespostas(lista);
   $('respostasModal').classList.add('open');
+  const lidas=lerLidas();
+  lista.forEach(r=>{ lidas[r.chave]=r.m.statusEm; });
+  try{ localStorage.setItem(CHAVE_RESP_LIDAS,JSON.stringify(lidas)); }catch(e){}
+  $('respostasBadge').style.display='none';
+  $('respostasBanner').style.display='none';
 }
 function marcarRespostasVistas(){
   const lidas=lerLidas();
@@ -1340,7 +1348,6 @@ function marcarRespostasVistas(){
 }
 $('respostasBtn').addEventListener('click',abrirRespostas);
 $('respostasBanner').addEventListener('click',abrirRespostas);
-$('respostasLidasBtn').addEventListener('click',()=>{ marcarRespostasVistas(); $('respostasModal').classList.remove('open'); });
 $('respostasFecharBtn').addEventListener('click',()=>$('respostasModal').classList.remove('open'));
 $('respostasModal').addEventListener('click',e=>{ if(e.target.id==='respostasModal')$('respostasModal').classList.remove('open'); });
 $('solicitadoPor').value=meuNome();
