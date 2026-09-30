@@ -440,7 +440,7 @@
   <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
   <div id="entriesList"></div>
 
-  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.5 · 30/09/2026</span></footer>
+  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.6 · 30/09/2026</span></footer>
 </div>
 
 <div class="admin-lock" id="adminLock">
@@ -545,7 +545,7 @@
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
 // VERSÃO DO APP: mude aqui a cada publicação (aparece no rodapé).
-const APP_VERSAO='2.5';
+const APP_VERSAO='2.6';
 const APP_VERSAO_DATA='30/09/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20260930';
 if('serviceWorker' in navigator){
@@ -675,6 +675,7 @@ async function initFirebase(){
       await authMod.signInAnonymously(auth);
       firebaseUser=auth.currentUser;
     }
+    lembrarMeuUid(firebaseUser?.uid);
 
     await registrarUsuario();
     await verificarAdministrador();
@@ -848,6 +849,7 @@ async function autenticarComSenha(){
     }
     const cred=await firebaseModules.auth.signInWithEmailAndPassword(auth,email,senha);
     firebaseUser=cred.user;
+    lembrarMeuUid(firebaseUser?.uid);
     const ok=await verificarAdministrador(true);
     if(!ok){ await authModFallbackAnonymous(); throw new Error('Este e-mail ainda não está autorizado como administrador.'); }
     localStorage.setItem('remanejamento-admin-last-auth',String(Date.now()));
@@ -969,6 +971,7 @@ async function authModFallbackAnonymous(){
   await firebaseModules.auth.signOut(auth);
   await firebaseModules.auth.signInAnonymously(auth);
   firebaseUser=auth.currentUser;
+  lembrarMeuUid(firebaseUser?.uid);
   isAdmin=false;
   adminEmail='';
   await registrarUsuario();
@@ -1281,18 +1284,32 @@ function ehMinha(e){
   const n=normNome(meuNome());
   return !!n && normNome(e.solicitadoPor)===n;
 }
+// Contas (uids) já usadas neste aparelho: marcações feitas por qualquer uma delas
+// são SUAS e nunca aparecem como "resposta" no sino.
+const CHAVE_MEUS_UIDS='remanejamento-meus-uids';
+function meusUids(){
+  try{ return JSON.parse(localStorage.getItem(CHAVE_MEUS_UIDS)||'[]')||[]; }catch(e){ return []; }
+}
+function lembrarMeuUid(uid){
+  if(!uid)return;
+  const l=meusUids();
+  if(l.includes(uid))return;
+  l.push(uid);
+  try{ localStorage.setItem(CHAVE_MEUS_UIDS,JSON.stringify(l.slice(-10))); }catch(e){}
+}
 function lerLidas(){
   try{ return JSON.parse(localStorage.getItem(CHAVE_RESP_LIDAS)||'{}')||{}; }catch(e){ return {}; }
 }
 function coletarRespostas(){
   const lidas=lerLidas();
-  const uid=firebaseUser?.uid||null;
+  const meus=new Set(meusUids());
+  if(firebaseUser?.uid) meus.add(firebaseUser.uid);
   const lista=[];
   entries.forEach(e=>{
     if(!ehMinha(e))return;
     (e.medidores||[]).forEach(m=>{
       if(!STATUS_RESPOSTA.includes(m.status) || !m.statusEm)return;
-      if(uid && m.respondidoPor===uid)return; // marcação feita por mim mesmo
+      if(m.respondidoPor && meus.has(m.respondidoPor))return; // marcação feita por mim mesmo
       const chave=e.id+':'+m.id;
       lista.push({entry:e,m,chave,nova:Number(lidas[chave]||0)<Number(m.statusEm)});
     });
@@ -1312,6 +1329,14 @@ function renderRespostas(lista=coletarRespostas()){
 }
 function atualizarRespostasUI(){
   const btn=$('respostasBtn'); if(!btn)return;
+  // Enquanto o app ainda não sabe qual é a sua conta (abrindo / 🟠),
+  // não mostra aviso: senão uma marcação sua apareceria como resposta.
+  if(!firebaseUser){
+    btn.style.display=entries.some(ehMinha)?'inline-flex':'none';
+    $('respostasBadge').style.display='none';
+    $('respostasBanner').style.display='none';
+    return;
+  }
   const lista=coletarRespostas();
   const novas=lista.filter(r=>r.nova).length;
   btn.style.display=entries.some(ehMinha)?'inline-flex':'none';
