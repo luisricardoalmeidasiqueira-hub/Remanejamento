@@ -73,7 +73,12 @@
   .entry-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .entry-top-actions{display:flex;gap:6px;flex:0 0 auto}
   .entry-code{font-size:15px;font-weight:700;color:var(--accent)}
-  .entry-date{font-size:12px;color:var(--text-dim);white-space:nowrap}
+  .entry-date{font-size:12px;color:var(--text-dim);flex:1;min-width:0}
+  .digitados-box{margin-top:18px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);font-family:-apple-system,system-ui,sans-serif}
+  .digitados-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border:0;background:transparent;color:var(--text-dim);font-size:14px;font-weight:700;cursor:pointer;text-align:left}
+  .digitados-count{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--text-dim);white-space:nowrap}
+  .digitados-body{padding:0 10px 10px}
+  .digitados-body .stage-title{background:var(--gray)}
   .entry-meta{font-size:12.5px;color:var(--text-dim);margin-top:4px}
   .entry-rota{font-weight:600;color:var(--accent)}
   .entry-obs{margin-top:6px;font-size:12.5px;color:var(--text-dim);font-style:italic;border-top:1px solid var(--line);padding-top:6px}
@@ -231,6 +236,9 @@
     .meter-card{background:#fff;border:1px solid #bbb}
     body.print-stage-mode .stage-group{display:none !important}
     body.print-stage-mode .stage-group.print-include{display:block !important}
+    .digitados-box{border:0;background:#fff}
+    .digitados-body{display:block !important;padding:0}
+    .digitados-toggle{padding:10px 0;color:#000}
   }
 
   .admin-lock{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:1000;align-items:center;justify-content:center;padding:18px;font-family:-apple-system,system-ui,sans-serif}
@@ -321,6 +329,7 @@
           <li>UC vizinha, rua, fotos e observações ajudam a achar o local.</li>
           <li>Depois de salvo, o <b>✏️</b> no cartão serve para corrigir ou acrescentar medidores.</li>
           <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
+          <li>Depois de marcado <b>Digitado</b>, o lançamento sai da lista principal e vai para <b>✅ Já digitados</b>, no fim da página.</li>
         </ol>
         <div class="dicas-legenda">🔵 Espelho · 🔴 Não realizado · 🟢 Concluído · ⛔ Recusado (com motivo) · 📅 Próximo mês</div>
         <div class="dicas-legenda">Conexão (ícone no topo): ☁️ conectado · 🟠 conectando · 🚫 sem conexão. Toque no ícone para ver o que cada um significa.</div>
@@ -431,7 +440,7 @@
   <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
   <div id="entriesList"></div>
 
-  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.3 · 30/09/2026</span></footer>
+  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.4 · 30/09/2026</span></footer>
 </div>
 
 <div class="admin-lock" id="adminLock">
@@ -537,7 +546,7 @@
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
 // VERSÃO DO APP: mude aqui a cada publicação (aparece no rodapé).
-const APP_VERSAO='2.3';
+const APP_VERSAO='2.4';
 const APP_VERSAO_DATA='30/09/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20260930';
 if('serviceWorker' in navigator){
@@ -1184,6 +1193,8 @@ let modalIndex = 0;
 let editandoId = null;
 // Tipo de remanejamento: 'cliente' | 'livro-todo' | 'parte-livro'
 let tipoRem = 'cliente';
+// Seção "Já digitados" (fica fechada para não encher a tela).
+let digitadosAberto = false;
 
 const $ = id => document.getElementById(id);
 
@@ -1859,8 +1870,9 @@ function renderEntries(){
     return;
   }
 
+  const montarGrupos=(fonte)=>{
   const grupos=new Map();
-  [...filtradas].sort((a,b)=>{
+  [...fonte].sort((a,b)=>{
     const ea=etapaNumero(a.rotaDestino), eb=etapaNumero(b.rotaDestino);
     return ea-eb || (b.dataRegistro||'').localeCompare(a.dataRegistro||'') || (b.criadoEm||0)-(a.criadoEm||0);
   }).forEach(e=>{
@@ -1869,7 +1881,7 @@ function renderEntries(){
     grupos.get(key).push(e);
   });
 
-  $('entriesList').innerHTML=[...grupos.entries()].map(([key,lista])=>{
+  return [...grupos.entries()].map(([key,lista])=>{
     const qtdMedidores=lista.reduce((total,e)=>total+(e.medidores||[]).length,0);
     const incluirImpressao=etapaEfetiva==='' || (etapaEfetiva==='__sem_etapa__'?key==='__sem_etapa__':etapaValorNormalizado(key)===String(etapaEfetiva));
     return `
@@ -1929,6 +1941,24 @@ function renderEntries(){
       `).join('')}
     </section>`;
   }).join('');
+  };
+
+  // Lista principal só com o que falta digitar; os digitados ficam numa seção fechada no fim.
+  const pendentes=filtradas.filter(e=>!e.digitado);
+  const digitados=filtradas.filter(e=>e.digitado);
+  const abrirDigitados=digitadosAberto || (!!termo && !pendentes.length);
+  $('entriesList').innerHTML=
+    (pendentes.length ? montarGrupos(pendentes) : `<div class="empty">Nenhum lançamento aguardando digitação.</div>`)+
+    (digitados.length ? `
+      <div class="digitados-box">
+        <button type="button" class="digitados-toggle" id="digitadosToggle" aria-expanded="${abrirDigitados}">
+          <span>✅ Já digitados ${abrirDigitados?'▴':'▾'}</span>
+          <span class="digitados-count">${digitados.length} lançamento${digitados.length===1?'':'s'}</span>
+        </button>
+        <div class="digitados-body" style="display:${abrirDigitados?'block':'none'}">${montarGrupos(digitados)}</div>
+      </div>` : '');
+  const tgDig=$('digitadosToggle');
+  if(tgDig) tgDig.addEventListener('click',()=>{ digitadosAberto=!abrirDigitados; renderEntries(); });
 
   $('entriesList').querySelectorAll('.entry-fotos').forEach(container=>{
     const entry=entries.find(e=>e.id===container.dataset.entryId);
