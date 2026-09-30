@@ -199,13 +199,19 @@
   .seq-row input[type="text"]{background:var(--panel)}
   .seq-ate{padding-bottom:13px;color:var(--text-dim);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600}
 
-  .conexao{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-family:-apple-system,system-ui,sans-serif;font-size:11.5px;font-weight:700;white-space:nowrap}
-  .conexao.conectado{color:#2e7d32;border-color:#a5d6a7;background:#eef8ef}
-  .conexao.conectando{color:#9a6b00;border-color:#f3d27a;background:#fff8e1}
-  .conexao.desconectado{color:var(--red);border-color:#f0b9ab;background:#fdf0ec}
+  /* Conexão com o Firebase: só o ícone (☁️ conectado · 🟠 conectando · 🚫 sem conexão). Tocar mostra a legenda. */
+  .conexao{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:36px;height:32px;padding:0;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;cursor:pointer}
+  .conexao:active{transform:scale(.95)}
+  .conexao.conectado{border-color:#a5d6a7;background:#eef8ef}
+  .conexao.conectando{border-color:#ffcc80;background:#fff3e0}
+  .conexao.desconectado{border-color:#f0b9ab;background:#fdf0ec}
   .conexao.conectando .conexao-icon{animation:pisca 1s ease-in-out infinite}
   @keyframes pisca{50%{opacity:.35}}
   @media (prefers-reduced-motion:reduce){.conexao.conectando .conexao-icon{animation:none}}
+  .conexao-legenda-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);margin:8px 0;font-size:13px;color:var(--text);line-height:1.4}
+  .conexao-legenda-item.atual{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+  .conexao-legenda-item .ico{font-size:20px;line-height:1.1;flex:0 0 auto}
+  .conexao-legenda-item .desc{color:var(--text-dim);font-size:12px}
 
   .cloud-status{font-family:-apple-system,system-ui,sans-serif;font-size:11px;margin-top:7px;text-align:center;color:var(--text-dim);min-height:14px}
   .cloud-status.online{color:#2e7d32}
@@ -268,7 +274,7 @@
     <div class="title-row">
       <h1>Remanejamento de Rota</h1>
       <div class="title-actions">
-        <span class="conexao conectando" id="conexaoBadge" role="status" aria-live="polite" title="Firebase: Conectando"><span class="conexao-icon">🟡</span><span id="conexaoTexto">Conectando</span></span>
+        <button type="button" class="conexao conectando" id="conexaoBadge" aria-live="polite" title="Firebase: conectando" aria-label="Firebase: conectando — toque para ver o que significa"><span class="conexao-icon">🟠</span></button>
         <button type="button" id="respostasBtn" class="admin-icon-btn resp-btn" title="Respostas" aria-label="Respostas das suas solicitações" style="display:none">🔔<span class="resp-badge" id="respostasBadge"></span></button>
         <button type="button" id="adminBtn" class="admin-icon-btn" title="Administração" aria-label="Administração">🔐</button>
       </div>
@@ -317,6 +323,7 @@
           <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
         </ol>
         <div class="dicas-legenda">🔵 Espelho · 🔴 Não realizado · 🟢 Concluído · ⛔ Recusado (com motivo) · 📅 Próximo mês</div>
+        <div class="dicas-legenda">Conexão (ícone no topo): ☁️ conectado · 🟠 conectando · 🚫 sem conexão. Toque no ícone para ver o que cada um significa.</div>
       </div>
     </details>
     <label for="etapaSelect">Etapa <span class="required">*</span></label>
@@ -424,7 +431,7 @@
   <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
   <div id="entriesList"></div>
 
-  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.2 · 26/09/2026</span></footer>
+  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.3 · 30/09/2026</span></footer>
 </div>
 
 <div class="admin-lock" id="adminLock">
@@ -475,6 +482,28 @@
   </div>
 </div>
 
+<div class="resp-modal" id="conexaoModal">
+  <div class="resp-card">
+    <h2>Conexão com o Firebase</h2>
+    <div class="resp-sub" id="conexaoAgora"></div>
+    <div class="conexao-legenda-item" data-estado="conectado">
+      <span class="ico">☁️</span>
+      <div><b>Conectado</b><div class="desc">Tudo certo. O que você salva vai para a nuvem e aparece para todo mundo.</div></div>
+    </div>
+    <div class="conexao-legenda-item" data-estado="conectando">
+      <span class="ico">🟠</span>
+      <div><b>Conectando</b><div class="desc">O app está tentando falar com o Firebase (ao abrir o app ou quando o sinal volta). Aguarde um pouquinho.</div></div>
+    </div>
+    <div class="conexao-legenda-item" data-estado="desconectado">
+      <span class="ico">🚫</span>
+      <div><b>Sem conexão</b><div class="desc">Sem internet ou o Firebase não respondeu. O que você salvar fica no aparelho e é enviado quando a conexão voltar. Evite fechar o app até aparecer a ☁️.</div></div>
+    </div>
+    <div class="resp-actions" style="grid-template-columns:1fr">
+      <button type="button" class="primary" id="conexaoFecharBtn">Entendi</button>
+    </div>
+  </div>
+</div>
+
 <div class="resp-modal" id="recusaModal">
   <div class="resp-card">
     <h2 style="color:#b34700">⛔ Recusar medidor</h2>
@@ -508,9 +537,9 @@
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
 // VERSÃO DO APP: mude aqui a cada publicação (aparece no rodapé).
-const APP_VERSAO='2.2';
-const APP_VERSAO_DATA='26/09/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20260926';
+const APP_VERSAO='2.3';
+const APP_VERSAO_DATA='30/09/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20260930';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -565,19 +594,28 @@ function setCloudStatus(text, kind=''){
   el.className='cloud-status'+(kind?' '+kind:'');
 }
 
-// Indicador no topo: ☁️ conectado · 🟡 conectando · 🚫 desconectado
+// Indicador no topo, só o ícone: ☁️ conectado · 🟠 conectando · 🚫 sem conexão.
+// Tocar no ícone abre a legenda.
+let estadoConexao='conectando';
+const CONEXAO_MAPA={
+  conectado:['☁️','Conectado'],
+  conectando:['🟠','Conectando'],
+  desconectado:['🚫','Sem conexão']
+};
 function setConexao(estado){
   const badge=$('conexaoBadge'); if(!badge)return;
-  const mapa={
-    conectado:['☁️','Conectado'],
-    conectando:['🟡','Conectando'],
-    desconectado:['🚫','Desconectado']
-  };
-  const [icone,texto]=mapa[estado]||mapa.conectando;
-  badge.className='conexao '+(mapa[estado]?estado:'conectando');
+  estadoConexao=CONEXAO_MAPA[estado]?estado:'conectando';
+  const [icone,texto]=CONEXAO_MAPA[estadoConexao];
+  badge.className='conexao '+estadoConexao;
   badge.querySelector('.conexao-icon').textContent=icone;
-  $('conexaoTexto').textContent=texto;
   badge.title='Firebase: '+texto;
+  badge.setAttribute('aria-label','Firebase: '+texto+' — toque para ver o que significa');
+  if($('conexaoModal')?.classList.contains('open'))renderLegendaConexao();
+}
+function renderLegendaConexao(){
+  const [icone,texto]=CONEXAO_MAPA[estadoConexao];
+  $('conexaoAgora').textContent=`Agora: ${icone} ${texto}`;
+  $('conexaoModal').querySelectorAll('[data-estado]').forEach(el=>el.classList.toggle('atual',el.dataset.estado===estadoConexao));
 }
 
 function atualizarConexaoPorSnapshot(snap){
@@ -1296,6 +1334,14 @@ $('respostasFecharBtn').addEventListener('click',()=>$('respostasModal').classLi
 $('respostasModal').addEventListener('click',e=>{ if(e.target.id==='respostasModal')$('respostasModal').classList.remove('open'); });
 $('solicitadoPor').value=meuNome();
 $('versaoApp').textContent=`Versão ${APP_VERSAO} · ${APP_VERSAO_DATA}`;
+
+// Legenda da conexão: tocar no ícone do topo.
+$('conexaoBadge').addEventListener('click',()=>{
+  renderLegendaConexao();
+  $('conexaoModal').classList.add('open');
+});
+$('conexaoFecharBtn').addEventListener('click',()=>$('conexaoModal').classList.remove('open'));
+$('conexaoModal').addEventListener('click',e=>{ if(e.target.id==='conexaoModal')$('conexaoModal').classList.remove('open'); });
 
 /* ===== RECUSA COM MOTIVO ===== */
 let recusaAlvo=null;
