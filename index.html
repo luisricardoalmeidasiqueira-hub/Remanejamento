@@ -329,7 +329,7 @@
           <li>UC vizinha, rua, fotos e observações ajudam a achar o local.</li>
           <li>Depois de salvo, o <b>✏️</b> no cartão serve para corrigir ou acrescentar medidores.</li>
           <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
-          <li>Depois de marcado <b>Digitado</b>, o lançamento sai da lista principal e vai para <b>✅ Já digitados</b>, no fim da página.</li>
+          <li>Depois de marcado <b>Digitado</b>, o lançamento sai da lista principal e vai para <b>✅ Já digitados</b> (só os do mês atual), no fim da página. Os de meses anteriores e os transferidos de mês ficam guardados em <b>🗂️ Histórico</b>.</li>
         </ol>
         <div class="dicas-legenda">🔵 Espelho · 🔴 Não realizado · 🟢 Concluído · ⛔ Recusado (com motivo) · 📅 Próximo mês</div>
         <div class="dicas-legenda">Conexão (ícone no topo): ☁️ conectado · 🟠 conectando · 🚫 sem conexão. Toque no ícone para ver o que cada um significa.</div>
@@ -440,7 +440,7 @@
   <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
   <div id="entriesList"></div>
 
-  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.6 · 30/09/2026</span></footer>
+  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.7 · 01/10/2026</span></footer>
 </div>
 
 <div class="admin-lock" id="adminLock">
@@ -545,9 +545,9 @@
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
 // VERSÃO DO APP: mude aqui a cada publicação (aparece no rodapé).
-const APP_VERSAO='2.6';
-const APP_VERSAO_DATA='30/09/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20260930';
+const APP_VERSAO='2.7';
+const APP_VERSAO_DATA='01/10/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20261001';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -1197,6 +1197,7 @@ let editandoId = null;
 let tipoRem = 'cliente';
 // Seção "Já digitados" (fica fechada para não encher a tela).
 let digitadosAberto = false;
+let historicoAberto = false;
 
 const $ = id => document.getElementById(id);
 
@@ -1975,22 +1976,40 @@ function renderEntries(){
   }).join('');
   };
 
-  // Lista principal só com o que falta digitar; os digitados ficam numa seção fechada no fim.
-  const pendentes=filtradas.filter(e=>!e.digitado);
-  const digitados=filtradas.filter(e=>e.digitado);
-  const abrirDigitados=digitadosAberto || (!!termo && !pendentes.length);
+  // Lista principal: só o que falta digitar (inclui o que foi transferido para este mês).
+  // "Já digitados": só os digitados no MÊS ATUAL.
+  // "Histórico": digitados em meses anteriores e lançamentos cujos medidores foram todos
+  // transferidos para outro mês (a cópia transferida aparece na lista principal).
+  const agora=new Date();
+  const mesAtual=`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
+  const nomeMes=agora.toLocaleDateString('pt-BR',{month:'long'});
+  const mesDigitado=e=>{
+    if(e.digitadoEm){ const t=new Date(e.digitadoEm); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`; }
+    return String(e.dataRegistro||'').slice(0,7);
+  };
+  const todoTransferido=e=>(e.medidores||[]).length>0 && e.medidores.every(m=>m.transferidoPara);
+  const pendentes=filtradas.filter(e=>!e.digitado && !todoTransferido(e));
+  const digitadosMes=filtradas.filter(e=>e.digitado && mesDigitado(e)===mesAtual);
+  const historico=filtradas.filter(e=>!pendentes.includes(e) && !digitadosMes.includes(e));
+  const buscando=!!termo && !pendentes.length;
+  const abrirDigitados=digitadosAberto || buscando;
+  const abrirHistorico=historicoAberto || (buscando && !digitadosMes.length);
+  const secao=(id,titulo,lista,aberto)=>`
+      <div class="digitados-box">
+        <button type="button" class="digitados-toggle" id="${id}" aria-expanded="${aberto}">
+          <span>${titulo} ${aberto?'▴':'▾'}</span>
+          <span class="digitados-count">${lista.length} lançamento${lista.length===1?'':'s'}</span>
+        </button>
+        <div class="digitados-body" style="display:${aberto?'block':'none'}">${montarGrupos(lista)}</div>
+      </div>`;
   $('entriesList').innerHTML=
     (pendentes.length ? montarGrupos(pendentes) : `<div class="empty">Nenhum lançamento aguardando digitação.</div>`)+
-    (digitados.length ? `
-      <div class="digitados-box">
-        <button type="button" class="digitados-toggle" id="digitadosToggle" aria-expanded="${abrirDigitados}">
-          <span>✅ Já digitados ${abrirDigitados?'▴':'▾'}</span>
-          <span class="digitados-count">${digitados.length} lançamento${digitados.length===1?'':'s'}</span>
-        </button>
-        <div class="digitados-body" style="display:${abrirDigitados?'block':'none'}">${montarGrupos(digitados)}</div>
-      </div>` : '');
+    (digitadosMes.length ? secao('digitadosToggle',`✅ Já digitados em ${nomeMes}`,digitadosMes,abrirDigitados) : '')+
+    (historico.length ? secao('historicoToggle','🗂️ Histórico (meses anteriores e transferidos)',historico,abrirHistorico) : '');
   const tgDig=$('digitadosToggle');
   if(tgDig) tgDig.addEventListener('click',()=>{ digitadosAberto=!abrirDigitados; renderEntries(); });
+  const tgHist=$('historicoToggle');
+  if(tgHist) tgHist.addEventListener('click',()=>{ historicoAberto=!abrirHistorico; renderEntries(); });
 
   $('entriesList').querySelectorAll('.entry-fotos').forEach(container=>{
     const entry=entries.find(e=>e.id===container.dataset.entryId);
