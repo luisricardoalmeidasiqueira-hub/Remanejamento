@@ -194,13 +194,17 @@ label.check-row input{width:20px;height:20px;margin:0;accent-color:var(--accent)
 .seq-row label{margin:0 0 6px}
 .seq-row input[type="text"]{background:var(--panel)}
 .seq-ate{padding-bottom:13px;color:var(--text-dim);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600}
-.conexao{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-family:-apple-system,system-ui,sans-serif;font-size:11.5px;font-weight:700;white-space:nowrap}
-.conexao.conectado{color:#2e7d32;border-color:#a5d6a7;background:#eef8ef}
-.conexao.conectando{color:#9a6b00;border-color:#f3d27a;background:#fff8e1}
-.conexao.desconectado{color:var(--red);border-color:#f0b9ab;background:#fdf0ec}
-.conexao.conectando .conexao-icon{animation:pisca 1s ease-in-out infinite}
-@keyframes pisca{50%{opacity:.35}}
-@media (prefers-reduced-motion:reduce){.conexao.conectando .conexao-icon{animation:none}}
+.conexao{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;flex:0 0 auto;width:42px;height:42px;padding:0;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);cursor:pointer;line-height:1}
+.conexao-topo{font-size:15px;display:flex;align-items:center;gap:1px}
+.conexao-sync{font-size:10px;display:none}
+.conexao.amarelo .conexao-sync{display:inline-block;animation:gira 1.2s linear infinite}
+.conexao-bola{font-size:11px}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.conexao.amarelo .conexao-sync{animation:none}}
+.legenda-con{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);margin:7px 0;font-size:13px;color:var(--text)}
+.legenda-con.atual{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.legenda-con b{display:block}
+.legenda-con span.small{color:var(--text-dim);font-size:11.5px}
 .cloud-status{font-family:-apple-system,system-ui,sans-serif;font-size:11px;margin-top:7px;text-align:center;color:var(--text-dim);min-height:14px}
 .cloud-status.online{color:#2e7d32}
 .cloud-status.offline{color:var(--red)}
@@ -260,7 +264,7 @@ footer{text-align:center;margin-top:26px;color:var(--accent);font-family:-apple-
 <div class="title-row">
 <h1>Remanejamento de Rota</h1>
 <div class="title-actions">
-<span class="conexao conectando" id="conexaoBadge" role="status" aria-live="polite" title="Firebase: Conectando"><span class="conexao-icon">🟡</span><span id="conexaoTexto">Conectando</span></span>
+<button type="button" class="conexao amarelo" id="conexaoBadge" aria-live="polite" aria-label="Firebase: verificando. Toque para ver a legenda" title="Firebase: verificando"><span class="conexao-topo">☁️<span class="conexao-sync">🔄</span></span><span class="conexao-bola" id="conexaoBola">🟡</span></button>
 <button type="button" id="respostasBtn" class="admin-icon-btn resp-btn" title="Respostas" aria-label="Respostas das suas solicitações" style="display:none">🔔<span class="resp-badge" id="respostasBadge"></span></button>
 <button type="button" id="adminBtn" class="admin-icon-btn" title="Administração" aria-label="Administração">🔐</button>
 </div>
@@ -399,7 +403,7 @@ footer{text-align:center;margin-top:26px;color:var(--accent);font-family:-apple-
 <div class="export-actions"><button class="export-btn" id="exportBtn">Exportar registros (CSV)</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir todos por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.6 · 07/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.7 · 07/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -444,6 +448,14 @@ footer{text-align:center;margin-top:26px;color:var(--accent);font-family:-apple-
 </div>
 </div>
 </div>
+<div class="resp-modal" id="conexaoModal">
+<div class="resp-card">
+<h2>☁️ Conexão com o Firebase</h2>
+<div class="resp-sub">O que significa a bolinha embaixo da nuvem. A 🔄 aparece girando enquanto verifica.</div>
+<div id="conexaoLista"></div>
+<div class="resp-actions" style="grid-template-columns:1fr"><button type="button" class="primary" id="conexaoFecharBtn">Entendi</button></div>
+</div>
+</div>
 <div class="resp-modal" id="recusaModal">
 <div class="resp-card">
 <h2 style="color:#b34700">⛔ Recusar medidor</h2>
@@ -472,7 +484,7 @@ footer{text-align:center;margin-top:26px;color:var(--accent);font-family:-apple-
 </div>
 </div>
 <script>
-const APP_VERSAO='2.6';
+const APP_VERSAO='2.7';
 const APP_VERSAO_DATA='07/10/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20261007';
 if('serviceWorker' in navigator){
@@ -517,22 +529,31 @@ if(!el)return;
 el.textContent=text;
 el.className='cloud-status'+(kind?' '+kind:'');
 }
+// Indicador no topo: ☁️ + bolinha. 🟢 sincronizado · 🟡 verificando · 🟠 salvo só no aparelho · 🔴 não conectou
+const CONEXAO_INFO={
+verde:['🟢','Tudo certo','Conectado ao Firebase e sincronizado.'],
+amarelo:['🟡','Verificando','Conectando ou conferindo os dados com o Firebase.'],
+laranja:['🟠','Salvo só no aparelho','Sem internet ou envio pendente. Fica guardado no celular e sobe sozinho quando conectar.'],
+vermelho:['🔴','Não conectou','Não foi possível conectar ao Firebase. Toque em 🔄 Atualizar app ou tente mais tarde.']
+};
+let conexaoAtual='amarelo';
 function setConexao(estado){
 const badge=$('conexaoBadge'); if(!badge)return;
-const mapa={
-conectado:['☁️','Conectado'],
-conectando:['🟡','Conectando'],
-desconectado:['🚫','Desconectado']
-};
-const [icone,texto]=mapa[estado]||mapa.conectando;
-badge.className='conexao '+(mapa[estado]?estado:'conectando');
-badge.querySelector('.conexao-icon').textContent=icone;
-$('conexaoTexto').textContent=texto;
-badge.title='Firebase: '+texto;
+let cor={conectado:'verde',conectando:'amarelo',pendente:'laranja',desconectado:navigator.onLine?'vermelho':'laranja'}[estado]||'amarelo';
+conexaoAtual=cor;
+const [bola,titulo]=CONEXAO_INFO[cor];
+badge.className='conexao '+cor;
+$('conexaoBola').textContent=bola;
+badge.title='Firebase: '+titulo;
+badge.setAttribute('aria-label','Firebase: '+titulo+'. Toque para ver a legenda');
+if($('conexaoModal')?.classList.contains('open'))renderLegendaConexao();
+}
+function renderLegendaConexao(){
+$('conexaoLista').innerHTML=Object.entries(CONEXAO_INFO).map(([k,[b,t,d]])=>`<div class="legenda-con${k===conexaoAtual?' atual':''}"><span style="font-size:20px">${b}</span><div><b>${t}${k===conexaoAtual?' · agora':''}</b><span class="small">${d}</span></div></div>`).join('');
 }
 function atualizarConexaoPorSnapshot(snap){
 if(!navigator.onLine){ setConexao('desconectado'); return; }
-setConexao(snap.metadata.fromCache?'conectando':'conectado');
+setConexao(snap.metadata.hasPendingWrites?'pendente':snap.metadata.fromCache?'conectando':'conectado');
 }
 async function initFirebase(){
 if(!firebaseReady){
@@ -1003,6 +1024,7 @@ return true;
 }catch(err){
 console.error('Falha ao salvar no Firebase',err);
 setCloudStatus('☁️ Falha ao salvar no Firebase.','offline');
+setConexao('pendente');
 return false;
 }finally{
 cloudApplying=false;
@@ -2059,6 +2081,9 @@ atualizarAdminUI();
 setInterval(()=>{ if(isAdmin && adminUnlockExpired()) lockAdminArea(); },60000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden && isAdmin && adminUnlockExpired()) lockAdminArea(); });
 window.addEventListener('offline',()=>setConexao('desconectado'));
+$('conexaoBadge').addEventListener('click',()=>{renderLegendaConexao();$('conexaoModal').classList.add('open');});
+$('conexaoFecharBtn').addEventListener('click',()=>$('conexaoModal').classList.remove('open'));
+$('conexaoModal').addEventListener('click',e=>{ if(e.target.id==='conexaoModal')$('conexaoModal').classList.remove('open'); });
 window.addEventListener('online',()=>setConexao(firebaseDB?'conectando':'desconectado'));
 entries=lerDados();
 normalizarRegistros();
