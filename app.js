@@ -8,7 +8,7 @@ messagingSenderId: '1076024528728',
 appId: '1:1076024528728:web:86144287862e7a81a31f2d'
 };
 const firebaseReady = true;
-const ADMIN_COLLECTION = 'admins';
+const ADMIN_COLLECTION = 'admins_remanejamento';
 const USERS_COLLECTION = 'usuarios';
 const PRIMARY_ADMIN_EMAIL = 'luissiqueir@hotmail.com';
 let isAdmin = false;
