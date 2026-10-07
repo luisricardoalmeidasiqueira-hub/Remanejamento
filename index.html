@@ -73,12 +73,7 @@
   .entry-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .entry-top-actions{display:flex;gap:6px;flex:0 0 auto}
   .entry-code{font-size:15px;font-weight:700;color:var(--accent)}
-  .entry-date{font-size:12px;color:var(--text-dim);flex:1;min-width:0}
-  .digitados-box{margin-top:18px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);font-family:-apple-system,system-ui,sans-serif}
-  .digitados-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border:0;background:transparent;color:var(--text-dim);font-size:14px;font-weight:700;cursor:pointer;text-align:left}
-  .digitados-count{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--text-dim);white-space:nowrap}
-  .digitados-body{padding:0 10px 10px}
-  .digitados-body .stage-title{background:var(--gray)}
+  .entry-date{font-size:12px;color:var(--text-dim);white-space:nowrap}
   .entry-meta{font-size:12.5px;color:var(--text-dim);margin-top:4px}
   .entry-rota{font-weight:600;color:var(--accent)}
   .entry-obs{margin-top:6px;font-size:12.5px;color:var(--text-dim);font-style:italic;border-top:1px solid var(--line);padding-top:6px}
@@ -204,19 +199,13 @@
   .seq-row input[type="text"]{background:var(--panel)}
   .seq-ate{padding-bottom:13px;color:var(--text-dim);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600}
 
-  /* Conexão com o Firebase: só o ícone (☁️ conectado · 🟠 conectando · 🚫 sem conexão). Tocar mostra a legenda. */
-  .conexao{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:36px;height:32px;padding:0;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-size:16px;line-height:1;cursor:pointer}
-  .conexao:active{transform:scale(.95)}
-  .conexao.conectado{border-color:#a5d6a7;background:#eef8ef}
-  .conexao.conectando{border-color:#ffcc80;background:#fff3e0}
-  .conexao.desconectado{border-color:#f0b9ab;background:#fdf0ec}
+  .conexao{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-family:-apple-system,system-ui,sans-serif;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .conexao.conectado{color:#2e7d32;border-color:#a5d6a7;background:#eef8ef}
+  .conexao.conectando{color:#9a6b00;border-color:#f3d27a;background:#fff8e1}
+  .conexao.desconectado{color:var(--red);border-color:#f0b9ab;background:#fdf0ec}
   .conexao.conectando .conexao-icon{animation:pisca 1s ease-in-out infinite}
   @keyframes pisca{50%{opacity:.35}}
   @media (prefers-reduced-motion:reduce){.conexao.conectando .conexao-icon{animation:none}}
-  .conexao-legenda-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);margin:8px 0;font-size:13px;color:var(--text);line-height:1.4}
-  .conexao-legenda-item.atual{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
-  .conexao-legenda-item .ico{font-size:20px;line-height:1.1;flex:0 0 auto}
-  .conexao-legenda-item .desc{color:var(--text-dim);font-size:12px}
 
   .cloud-status{font-family:-apple-system,system-ui,sans-serif;font-size:11px;margin-top:7px;text-align:center;color:var(--text-dim);min-height:14px}
   .cloud-status.online{color:#2e7d32}
@@ -236,9 +225,6 @@
     .meter-card{background:#fff;border:1px solid #bbb}
     body.print-stage-mode .stage-group{display:none !important}
     body.print-stage-mode .stage-group.print-include{display:block !important}
-    .digitados-box{border:0;background:#fff}
-    .digitados-body{display:block !important;padding:0}
-    .digitados-toggle{padding:10px 0;color:#000}
   }
 
   .admin-lock{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:1000;align-items:center;justify-content:center;padding:18px;font-family:-apple-system,system-ui,sans-serif}
@@ -282,7 +268,7 @@
     <div class="title-row">
       <h1>Remanejamento de Rota</h1>
       <div class="title-actions">
-        <button type="button" class="conexao conectando" id="conexaoBadge" aria-live="polite" title="Firebase: conectando" aria-label="Firebase: conectando — toque para ver o que significa"><span class="conexao-icon">🟠</span></button>
+        <span class="conexao conectando" id="conexaoBadge" role="status" aria-live="polite" title="Firebase: Conectando"><span class="conexao-icon">🟡</span><span id="conexaoTexto">Conectando</span></span>
         <button type="button" id="respostasBtn" class="admin-icon-btn resp-btn" title="Respostas" aria-label="Respostas das suas solicitações" style="display:none">🔔<span class="resp-badge" id="respostasBadge"></span></button>
         <button type="button" id="adminBtn" class="admin-icon-btn" title="Administração" aria-label="Administração">🔐</button>
       </div>
@@ -327,12 +313,10 @@
           <li><b>Por sequência</b>: para remanejar o livro <b>da sequência</b> tal <b>até a sequência</b> tal (ex.: da 1 até a 200). Informe o número do livro e as duas sequências. O medidor também deixa de ser obrigatório.</li>
           <li><b>Cliente</b>: digite o <b>número do medidor / UC</b> (obrigatório). Se for mais de um, toque em <b>+ Adicionar medidor</b>.</li>
           <li>UC vizinha, rua, fotos e observações ajudam a achar o local.</li>
-          <li>Depois de salvo, o <b>✏️</b> no cartão serve para corrigir ou acrescentar medidores.</li>
+          <li>Depois de salvo, o <b>✏️</b> no cartão serve para corrigir ou acrescentar medidores, e a <b>🗑️</b> ao lado de cada medidor tira só aquele número do lançamento.</li>
           <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
-          <li>Depois de marcado <b>Digitado</b>, o lançamento sai da lista principal e vai para <b>✅ Já digitados</b> (só os do mês atual), no fim da página. Os de meses anteriores e os transferidos de mês ficam guardados em <b>🗂️ Histórico</b>.</li>
         </ol>
         <div class="dicas-legenda">🔵 Espelho · 🔴 Não realizado · 🟢 Concluído · ⛔ Recusado (com motivo) · 📅 Próximo mês</div>
-        <div class="dicas-legenda">Conexão (ícone no topo): ☁️ conectado · 🟠 conectando · 🚫 sem conexão. Toque no ícone para ver o que cada um significa.</div>
       </div>
     </details>
     <label for="etapaSelect">Etapa <span class="required">*</span></label>
@@ -440,7 +424,7 @@
   <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
   <div id="entriesList"></div>
 
-  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.7 · 01/10/2026</span></footer>
+  <footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.3 · 07/10/2026</span></footer>
 </div>
 
 <div class="admin-lock" id="adminLock">
@@ -484,30 +468,9 @@
     <h2>🔔 Respostas das suas solicitações</h2>
     <div class="resp-sub">Aparece aqui quando um medidor que você pediu for marcado como Espelho, Não realizado, Concluído ou Recusado.</div>
     <div id="respostasLista"></div>
-    <div class="resp-actions" style="grid-template-columns:1fr">
-      <button type="button" class="primary" id="respostasFecharBtn">OK</button>
-    </div>
-  </div>
-</div>
-
-<div class="resp-modal" id="conexaoModal">
-  <div class="resp-card">
-    <h2>Conexão com o Firebase</h2>
-    <div class="resp-sub" id="conexaoAgora"></div>
-    <div class="conexao-legenda-item" data-estado="conectado">
-      <span class="ico">☁️</span>
-      <div><b>Conectado</b><div class="desc">Tudo certo. O que você salva vai para a nuvem e aparece para todo mundo.</div></div>
-    </div>
-    <div class="conexao-legenda-item" data-estado="conectando">
-      <span class="ico">🟠</span>
-      <div><b>Conectando</b><div class="desc">O app está tentando falar com o Firebase (ao abrir o app ou quando o sinal volta). Aguarde um pouquinho.</div></div>
-    </div>
-    <div class="conexao-legenda-item" data-estado="desconectado">
-      <span class="ico">🚫</span>
-      <div><b>Sem conexão</b><div class="desc">Sem internet ou o Firebase não respondeu. O que você salvar fica no aparelho e é enviado quando a conexão voltar. Evite fechar o app até aparecer a ☁️.</div></div>
-    </div>
-    <div class="resp-actions" style="grid-template-columns:1fr">
-      <button type="button" class="primary" id="conexaoFecharBtn">Entendi</button>
+    <div class="resp-actions">
+      <button type="button" class="primary" id="respostasLidasBtn">✓ Marcar como vistas</button>
+      <button type="button" id="respostasFecharBtn">Fechar</button>
     </div>
   </div>
 </div>
@@ -545,9 +508,9 @@
 // PWA: registra o Service Worker com uma versão nova para cada publicação.
 // Ele usa rede primeiro e cache apenas como reserva, evitando ficar preso em versões antigas.
 // VERSÃO DO APP: mude aqui a cada publicação (aparece no rodapé).
-const APP_VERSAO='2.7';
-const APP_VERSAO_DATA='01/10/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20261001';
+const APP_VERSAO='2.3';
+const APP_VERSAO_DATA='07/10/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20261007';
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -602,28 +565,19 @@ function setCloudStatus(text, kind=''){
   el.className='cloud-status'+(kind?' '+kind:'');
 }
 
-// Indicador no topo, só o ícone: ☁️ conectado · 🟠 conectando · 🚫 sem conexão.
-// Tocar no ícone abre a legenda.
-let estadoConexao='conectando';
-const CONEXAO_MAPA={
-  conectado:['☁️','Conectado'],
-  conectando:['🟠','Conectando'],
-  desconectado:['🚫','Sem conexão']
-};
+// Indicador no topo: ☁️ conectado · 🟡 conectando · 🚫 desconectado
 function setConexao(estado){
   const badge=$('conexaoBadge'); if(!badge)return;
-  estadoConexao=CONEXAO_MAPA[estado]?estado:'conectando';
-  const [icone,texto]=CONEXAO_MAPA[estadoConexao];
-  badge.className='conexao '+estadoConexao;
+  const mapa={
+    conectado:['☁️','Conectado'],
+    conectando:['🟡','Conectando'],
+    desconectado:['🚫','Desconectado']
+  };
+  const [icone,texto]=mapa[estado]||mapa.conectando;
+  badge.className='conexao '+(mapa[estado]?estado:'conectando');
   badge.querySelector('.conexao-icon').textContent=icone;
+  $('conexaoTexto').textContent=texto;
   badge.title='Firebase: '+texto;
-  badge.setAttribute('aria-label','Firebase: '+texto+' — toque para ver o que significa');
-  if($('conexaoModal')?.classList.contains('open'))renderLegendaConexao();
-}
-function renderLegendaConexao(){
-  const [icone,texto]=CONEXAO_MAPA[estadoConexao];
-  $('conexaoAgora').textContent=`Agora: ${icone} ${texto}`;
-  $('conexaoModal').querySelectorAll('[data-estado]').forEach(el=>el.classList.toggle('atual',el.dataset.estado===estadoConexao));
 }
 
 function atualizarConexaoPorSnapshot(snap){
@@ -675,7 +629,6 @@ async function initFirebase(){
       await authMod.signInAnonymously(auth);
       firebaseUser=auth.currentUser;
     }
-    lembrarMeuUid(firebaseUser?.uid);
 
     await registrarUsuario();
     await verificarAdministrador();
@@ -849,7 +802,6 @@ async function autenticarComSenha(){
     }
     const cred=await firebaseModules.auth.signInWithEmailAndPassword(auth,email,senha);
     firebaseUser=cred.user;
-    lembrarMeuUid(firebaseUser?.uid);
     const ok=await verificarAdministrador(true);
     if(!ok){ await authModFallbackAnonymous(); throw new Error('Este e-mail ainda não está autorizado como administrador.'); }
     localStorage.setItem('remanejamento-admin-last-auth',String(Date.now()));
@@ -971,7 +923,6 @@ async function authModFallbackAnonymous(){
   await firebaseModules.auth.signOut(auth);
   await firebaseModules.auth.signInAnonymously(auth);
   firebaseUser=auth.currentUser;
-  lembrarMeuUid(firebaseUser?.uid);
   isAdmin=false;
   adminEmail='';
   await registrarUsuario();
@@ -1195,9 +1146,6 @@ let modalIndex = 0;
 let editandoId = null;
 // Tipo de remanejamento: 'cliente' | 'livro-todo' | 'parte-livro'
 let tipoRem = 'cliente';
-// Seção "Já digitados" (fica fechada para não encher a tela).
-let digitadosAberto = false;
-let historicoAberto = false;
 
 const $ = id => document.getElementById(id);
 
@@ -1285,32 +1233,18 @@ function ehMinha(e){
   const n=normNome(meuNome());
   return !!n && normNome(e.solicitadoPor)===n;
 }
-// Contas (uids) já usadas neste aparelho: marcações feitas por qualquer uma delas
-// são SUAS e nunca aparecem como "resposta" no sino.
-const CHAVE_MEUS_UIDS='remanejamento-meus-uids';
-function meusUids(){
-  try{ return JSON.parse(localStorage.getItem(CHAVE_MEUS_UIDS)||'[]')||[]; }catch(e){ return []; }
-}
-function lembrarMeuUid(uid){
-  if(!uid)return;
-  const l=meusUids();
-  if(l.includes(uid))return;
-  l.push(uid);
-  try{ localStorage.setItem(CHAVE_MEUS_UIDS,JSON.stringify(l.slice(-10))); }catch(e){}
-}
 function lerLidas(){
   try{ return JSON.parse(localStorage.getItem(CHAVE_RESP_LIDAS)||'{}')||{}; }catch(e){ return {}; }
 }
 function coletarRespostas(){
   const lidas=lerLidas();
-  const meus=new Set(meusUids());
-  if(firebaseUser?.uid) meus.add(firebaseUser.uid);
+  const uid=firebaseUser?.uid||null;
   const lista=[];
   entries.forEach(e=>{
     if(!ehMinha(e))return;
     (e.medidores||[]).forEach(m=>{
       if(!STATUS_RESPOSTA.includes(m.status) || !m.statusEm)return;
-      if(m.respondidoPor && meus.has(m.respondidoPor))return; // marcação feita por mim mesmo
+      if(uid && m.respondidoPor===uid)return; // marcação feita por mim mesmo
       const chave=e.id+':'+m.id;
       lista.push({entry:e,m,chave,nova:Number(lidas[chave]||0)<Number(m.statusEm)});
     });
@@ -1330,14 +1264,6 @@ function renderRespostas(lista=coletarRespostas()){
 }
 function atualizarRespostasUI(){
   const btn=$('respostasBtn'); if(!btn)return;
-  // Enquanto o app ainda não sabe qual é a sua conta (abrindo / 🟠),
-  // não mostra aviso: senão uma marcação sua apareceria como resposta.
-  if(!firebaseUser){
-    btn.style.display=entries.some(ehMinha)?'inline-flex':'none';
-    $('respostasBadge').style.display='none';
-    $('respostasBanner').style.display='none';
-    return;
-  }
   const lista=coletarRespostas();
   const novas=lista.filter(r=>r.nova).length;
   btn.style.display=entries.some(ehMinha)?'inline-flex':'none';
@@ -1353,18 +1279,9 @@ function atualizarRespostasUI(){
   }
   if($('respostasModal').classList.contains('open'))renderRespostas(lista);
 }
-// Abriu a lista = leu. Tudo fica marcado como visto na hora:
-// o número vermelho e a faixa amarela somem e não voltam mais para essas respostas.
-// (O destaque "nova" continua na lista até fechar, para você ver o que chegou.)
 function abrirRespostas(){
-  const lista=coletarRespostas();
-  renderRespostas(lista);
+  renderRespostas();
   $('respostasModal').classList.add('open');
-  const lidas=lerLidas();
-  lista.forEach(r=>{ lidas[r.chave]=r.m.statusEm; });
-  try{ localStorage.setItem(CHAVE_RESP_LIDAS,JSON.stringify(lidas)); }catch(e){}
-  $('respostasBadge').style.display='none';
-  $('respostasBanner').style.display='none';
 }
 function marcarRespostasVistas(){
   const lidas=lerLidas();
@@ -1374,18 +1291,11 @@ function marcarRespostasVistas(){
 }
 $('respostasBtn').addEventListener('click',abrirRespostas);
 $('respostasBanner').addEventListener('click',abrirRespostas);
+$('respostasLidasBtn').addEventListener('click',()=>{ marcarRespostasVistas(); $('respostasModal').classList.remove('open'); });
 $('respostasFecharBtn').addEventListener('click',()=>$('respostasModal').classList.remove('open'));
 $('respostasModal').addEventListener('click',e=>{ if(e.target.id==='respostasModal')$('respostasModal').classList.remove('open'); });
 $('solicitadoPor').value=meuNome();
 $('versaoApp').textContent=`Versão ${APP_VERSAO} · ${APP_VERSAO_DATA}`;
-
-// Legenda da conexão: tocar no ícone do topo.
-$('conexaoBadge').addEventListener('click',()=>{
-  renderLegendaConexao();
-  $('conexaoModal').classList.add('open');
-});
-$('conexaoFecharBtn').addEventListener('click',()=>$('conexaoModal').classList.remove('open'));
-$('conexaoModal').addEventListener('click',e=>{ if(e.target.id==='conexaoModal')$('conexaoModal').classList.remove('open'); });
 
 /* ===== RECUSA COM MOTIVO ===== */
 let recusaAlvo=null;
@@ -1903,9 +1813,8 @@ function renderEntries(){
     return;
   }
 
-  const montarGrupos=(fonte)=>{
   const grupos=new Map();
-  [...fonte].sort((a,b)=>{
+  [...filtradas].sort((a,b)=>{
     const ea=etapaNumero(a.rotaDestino), eb=etapaNumero(b.rotaDestino);
     return ea-eb || (b.dataRegistro||'').localeCompare(a.dataRegistro||'') || (b.criadoEm||0)-(a.criadoEm||0);
   }).forEach(e=>{
@@ -1914,7 +1823,7 @@ function renderEntries(){
     grupos.get(key).push(e);
   });
 
-  return [...grupos.entries()].map(([key,lista])=>{
+  $('entriesList').innerHTML=[...grupos.entries()].map(([key,lista])=>{
     const qtdMedidores=lista.reduce((total,e)=>total+(e.medidores||[]).length,0);
     const incluirImpressao=etapaEfetiva==='' || (etapaEfetiva==='__sem_etapa__'?key==='__sem_etapa__':etapaValorNormalizado(key)===String(etapaEfetiva));
     return `
@@ -1951,7 +1860,7 @@ function renderEntries(){
                 </div>
                 <div class="meter-tools">
                   <button type="button" class="meter-tool save" title="Salvar marcação" aria-label="Salvar marcação" data-action="salvar-marcacao" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">💾</button>
-                  <button type="button" class="meter-tool delete" title="Excluir marcação" aria-label="Excluir marcação" data-action="excluir-marcacao" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">🗑️</button>
+                  <button type="button" class="meter-tool delete" title="Excluir este medidor" aria-label="Excluir este medidor" data-action="excluir-marcacao" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">🗑️</button>
                 </div>
               </div>
             `).join('')}
@@ -1974,42 +1883,6 @@ function renderEntries(){
       `).join('')}
     </section>`;
   }).join('');
-  };
-
-  // Lista principal: só o que falta digitar (inclui o que foi transferido para este mês).
-  // "Já digitados": só os digitados no MÊS ATUAL.
-  // "Histórico": digitados em meses anteriores e lançamentos cujos medidores foram todos
-  // transferidos para outro mês (a cópia transferida aparece na lista principal).
-  const agora=new Date();
-  const mesAtual=`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
-  const nomeMes=agora.toLocaleDateString('pt-BR',{month:'long'});
-  const mesDigitado=e=>{
-    if(e.digitadoEm){ const t=new Date(e.digitadoEm); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`; }
-    return String(e.dataRegistro||'').slice(0,7);
-  };
-  const todoTransferido=e=>(e.medidores||[]).length>0 && e.medidores.every(m=>m.transferidoPara);
-  const pendentes=filtradas.filter(e=>!e.digitado && !todoTransferido(e));
-  const digitadosMes=filtradas.filter(e=>e.digitado && mesDigitado(e)===mesAtual);
-  const historico=filtradas.filter(e=>!pendentes.includes(e) && !digitadosMes.includes(e));
-  const buscando=!!termo && !pendentes.length;
-  const abrirDigitados=digitadosAberto || buscando;
-  const abrirHistorico=historicoAberto || (buscando && !digitadosMes.length);
-  const secao=(id,titulo,lista,aberto)=>`
-      <div class="digitados-box">
-        <button type="button" class="digitados-toggle" id="${id}" aria-expanded="${aberto}">
-          <span>${titulo} ${aberto?'▴':'▾'}</span>
-          <span class="digitados-count">${lista.length} lançamento${lista.length===1?'':'s'}</span>
-        </button>
-        <div class="digitados-body" style="display:${aberto?'block':'none'}">${montarGrupos(lista)}</div>
-      </div>`;
-  $('entriesList').innerHTML=
-    (pendentes.length ? montarGrupos(pendentes) : `<div class="empty">Nenhum lançamento aguardando digitação.</div>`)+
-    (digitadosMes.length ? secao('digitadosToggle',`✅ Já digitados em ${nomeMes}`,digitadosMes,abrirDigitados) : '')+
-    (historico.length ? secao('historicoToggle','🗂️ Histórico (meses anteriores e transferidos)',historico,abrirHistorico) : '');
-  const tgDig=$('digitadosToggle');
-  if(tgDig) tgDig.addEventListener('click',()=>{ digitadosAberto=!abrirDigitados; renderEntries(); });
-  const tgHist=$('historicoToggle');
-  if(tgHist) tgHist.addEventListener('click',()=>{ historicoAberto=!abrirHistorico; renderEntries(); });
 
   $('entriesList').querySelectorAll('.entry-fotos').forEach(container=>{
     const entry=entries.find(e=>e.id===container.dataset.entryId);
@@ -2044,8 +1917,18 @@ function renderEntries(){
       }
       if(action==='excluir-marcacao'){
         const entry=entries.find(e=>e.id===btn.dataset.id); const m=entry?.medidores.find(x=>x.id===btn.dataset.mid); if(!entry||!m)return;
-        if(!window.confirm('Excluir somente a marcação deste medidor? O número e o histórico serão mantidos.'))return;
-        m.status='pendente'; m.statusEm=null; m.transferidoPara=null; m.respondidoPor=null; m.motivoRecusa=null; salvarLocal(); await salvarCloud(entry); renderEntries(); return;
+        // A lixeira remove este medidor do lançamento (os outros continuam).
+        if(entry.medidores.length<=1){alert('Este é o único item do lançamento. Para tirar ele, use "🗑️ Excluir lançamento" (administrador) ou toque no ✏️ para trocar o número.');return;}
+        if(!window.confirm(`Excluir o medidor ${m.numero} deste lançamento? Os outros medidores continuam.`))return;
+        const copiaMeds=[...entry.medidores];
+        entry.medidores=entry.medidores.filter(x=>x.id!==m.id);
+        if(m.livro){ entry.livroTodo=false; entry.parteLivro=false; entry.seqInicio=''; entry.seqFim=''; }
+        entry.editadoEm=Date.now();
+        if(!salvarLocal()){ entry.medidores=copiaMeds; alert('Não foi possível excluir. Tente de novo.'); return; }
+        const okNuvem=firebaseDB ? await salvarCloud(entry) : true;
+        renderEntries();
+        const st=$('statusMsg'); st.textContent=okNuvem?'Medidor excluído.':'Excluído no aparelho, mas não no Firebase.'; st.style.color=okNuvem?'var(--accent)':'var(--red)'; setTimeout(()=>st.textContent='',2500);
+        return;
       }
       if(action==='definir-etapa'){
         const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
