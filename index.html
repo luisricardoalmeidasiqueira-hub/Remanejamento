@@ -12,7 +12,7 @@
 <meta name="application-name" content="Remanejamento de Rota">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Remanejamento de Rota</title>
-<link rel="stylesheet" href="estilo.css?v=2.13">
+<link rel="stylesheet" href="estilo.css?v=2.14">
 <style>
 .filtro-pessoa-wrap{margin-top:8px}
 .filtro-pessoa-btn{width:100%;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--accent-dim);border-radius:8px;background:var(--panel-2);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
@@ -36,6 +36,50 @@ input[type="date"]{height:36px;border:0;border-radius:999px;background:#e9e9eb;c
 .filtro-pessoa-btn{height:36px;padding:0 14px;justify-content:center;border:0;border-radius:999px;background:#e9e9eb;color:#1c1c1e;font-size:15px;font-weight:600}
 .filtro-pessoa-btn b{flex:0 1 auto}
 .filtro-pessoa-btn .seta{font-size:11px;color:#3a3a3c}
+/* ===== Tudo em pílula (2.14) ===== */
+header{margin-bottom:14px;padding-bottom:10px}
+header p{font-size:12.5px}
+.topo-linha{display:flex;align-items:center;gap:8px;margin-top:10px}
+.versao-topo{margin-right:auto;padding:5px 12px;border-radius:999px;background:#e9e9eb;color:#3a3a3c;font-family:-apple-system,system-ui,sans-serif;font-size:12.5px;font-weight:700}
+.icone-pilula{width:46px;height:32px;padding:0;border:0;border-radius:999px;background:#e9e9eb;font-size:16px;line-height:1;cursor:pointer}
+.icone-pilula:disabled{opacity:.55}
+.icone-pilula:active,.versao-topo:active{transform:scale(.96)}
+input[type="text"],input[type="email"],input[type="password"]{height:40px;padding:0 16px;border:0;border-radius:999px;background:#f0f1f4;font-size:16px}
+.seq-row input[type="text"]{background:#fff}
+textarea{border:0;border-radius:18px;background:#f0f1f4}
+.filtro-rota input{height:36px;border:0;border-radius:999px;background:#f0f1f4;padding:0 14px}
+.medidor-row input{height:40px}
+.rm-medidor{width:40px;height:36px;border:0;border-radius:999px;background:#e9e9eb;font-size:15px}
+.tipo-opts button{padding:8px 4px;border-radius:999px;font-size:12.5px;line-height:1.15}
+.add-medidor-btn,.foto-btn{border-radius:999px;padding:8px 10px;font-size:13px}
+.save-btn{height:44px;padding:0 14px;margin-top:16px;border-radius:999px}
+.cancel-edit-btn{border-radius:999px;padding:9px}
+.export-actions{gap:6px;margin-bottom:12px}
+.export-btn{padding:8px 10px;border:0;border-radius:999px;background:#e9e9eb;color:#1c1c1e;font-size:13px}
+.export-actions .export-btn{min-width:0;height:34px;padding:0 10px;white-space:nowrap}
+.dicas{border:0;border-radius:18px;background:#f0f1f4}
+.dicas summary{padding:9px 14px;font-size:13px}
+label{margin:12px 0 5px}
+/* Cartão do medidor: fechado numa linha, toca para abrir */
+.meter-card{margin-top:6px;padding:0;border:0;border-radius:18px;background:#f0f1f4;overflow:hidden}
+.meter-head{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.meter-seta{font-size:11px;color:var(--text-dim);transition:transform .15s}
+.meter-card.aberto .meter-seta{transform:rotate(180deg)}
+.meter-body{display:none;padding:0 10px 10px}
+.meter-card.aberto .meter-body{display:block}
+.meter-card .recusa-info,.meter-card .transfer-info,.meter-card .history-note{padding:0 12px 7px;margin-top:0}
+.meter-actions{gap:5px;margin-top:2px}
+.meter-actions button{padding:6px 10px;border:0;border-radius:999px;background:#fff;color:#1c1c1e;font-size:12px;font-weight:600}
+.meter-tools{margin-top:7px}
+.meter-tool{width:42px;height:30px;border:0;border-radius:999px;background:#fff;font-size:15px}
+.entry-edit-top,.entry-del-top{min-width:38px;height:30px;padding:0 8px;border:0;border-radius:999px;background:#e9e9eb;font-size:14px}
+.entry-status-row{border-top:0;padding-top:4px}
+.entry-status-btn{padding:7px 4px;border:0;border-radius:999px;background:#e9e9eb;color:#3a3a3c}
+.entry-status-btn.marcado{background:#dcefdc;color:#2e7d32}
+.entry-actions{border-top:0;padding-top:2px;margin-top:6px}
+.entry-del,.entry-stage-btn{border:0;border-radius:999px;background:#e9e9eb;padding:6px 12px}
+.stage-title{border-radius:999px;padding:7px 14px;font-size:13.5px}
+.entry{padding:10px 12px}
 </style>
 </head>
 <body>
@@ -50,9 +94,10 @@ input[type="date"]{height:36px;border:0;border-radius:999px;background:#e9e9eb;c
 </div>
 </div>
 <p>Cliente ligado no lugar certo, mas com rota errada no sistema</p>
-<div class="header-actions">
-<button type="button" class="share-app-btn" id="shareAppBtn">↗️ Compartilhar</button>
-<button type="button" class="share-app-btn" id="updateAppBtn">🔄 Atualizar app</button>
+<div class="topo-linha">
+<span class="versao-topo" id="versaoTopo">Versão</span>
+<button type="button" class="icone-pilula" id="shareAppBtn" title="Compartilhar aplicativo" aria-label="Compartilhar aplicativo">↗️</button>
+<button type="button" class="icone-pilula" id="updateAppBtn" title="Atualizar aplicativo" aria-label="Atualizar aplicativo">🔄</button>
 </div>
 <button type="button" class="resp-banner" id="respostasBanner"></button>
 </header>
@@ -90,6 +135,8 @@ input[type="date"]{height:36px;border:0;border-radius:999px;background:#e9e9eb;c
 <li>Depois de salvo, o <b>✏️</b> no cartão serve para corrigir ou acrescentar medidores, e a <b>🗑️</b> ao lado de cada medidor tira só aquele número do lançamento.</li>
 <li>Marcou a cor errada? Toque na cor certa, ou no botão <b>cinza Pendente</b> para voltar como estava.</li>
 <li>Em <b>👥 Quem lançou</b>, escolha um nome para ver só os lançamentos daquela pessoa. A bolinha laranja mostra quem ainda tem medidor pendente.</li>
+<li>Cada medidor aparece fechado numa linha. Toque nele (▾) para abrir as cores, o 💾 e a 🗑️. Ao escolher a cor, ele fecha sozinho.</li>
+<li>No topo: <b>↗️</b> compartilha o app e <b>🔄</b> atualiza para a versão mais nova.</li>
 <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
 </ol>
 <div class="dicas-legenda"><span class="dot-cinza"></span>Pendente (ainda não feito) · 🔵 Espelho · 🔴 Não realizado · 🟢 Concluído · ⛔ Recusado (com motivo) · 📅 Próximo mês</div>
@@ -153,7 +200,7 @@ input[type="date"]{height:36px;border:0;border-radius:999px;background:#e9e9eb;c
 </div>
 <div class="filtro-rota">
 <div class="filtro-controles">
-<input type="text" id="filtroRota" placeholder="Buscar medidor, UC, rua ou etapa..." autocomplete="off">
+<input type="text" id="filtroRota" placeholder="Buscar medidor, UC, rua..." autocomplete="off">
 <div class="filtro-etapa-wrap">
 <button type="button" class="filtro-etapa-btn" id="filtroEtapaBtn">Etapa ▾</button>
 <div class="filtro-etapa-menu" id="filtroEtapaMenu">
@@ -185,10 +232,10 @@ input[type="date"]{height:36px;border:0;border-radius:999px;background:#e9e9eb;c
 <div class="filtro-pessoa-menu" id="filtroPessoaMenu"></div>
 </div>
 </div>
-<div class="export-actions"><button class="export-btn" id="exportBtn">Exportar registros (CSV)</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir todos por etapa</button></div>
+<div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.13 · 14/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.14 · 14/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -269,7 +316,7 @@ input[type="date"]{height:36px;border:0;border-radius:999px;background:#e9e9eb;c
 </div>
 </div>
 <script>
-const APP_VERSAO='2.13';
+const APP_VERSAO='2.14';
 const APP_VERSAO_DATA='14/10/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20261014';
 if('serviceWorker' in navigator){
@@ -287,6 +334,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.13"></script>
+<script type="module" src="app.js?v=2.14"></script>
 </body>
 </html>

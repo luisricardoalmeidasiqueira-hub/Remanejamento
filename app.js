@@ -545,6 +545,8 @@ const CHAVE_DADOS = 'remanejamento-rota-entries';
 let entries = [];
 let filtroAtual = '';
 let filtroEtapa = '';
+let filtroPessoa = '';
+const medidoresAbertos = new Set(); // medidores abertos (com as cores à mostra) // nome normalizado de quem lançou ('' = todos)
 let medidorValores = [''];
 let selectedFotos = [];
 let dataRegistro = todayStr();
@@ -702,6 +704,7 @@ $('respostasFecharBtn').addEventListener('click',()=>$('respostasModal').classLi
 $('respostasModal').addEventListener('click',e=>{ if(e.target.id==='respostasModal')$('respostasModal').classList.remove('open'); });
 $('solicitadoPor').value=meuNome();
 $('versaoApp').textContent=`Versão ${APP_VERSAO} · ${APP_VERSAO_DATA}`;
+if($('versaoTopo'))$('versaoTopo').textContent=`Versão ${APP_VERSAO}`;
 let recusaAlvo=null;
 function abrirRecusa(entryId,mid){
 const entry=entries.find(e=>e.id===entryId);
@@ -728,6 +731,7 @@ m.status='recusado';
 m.motivoRecusa=motivo;
 m.statusEm=Date.now();
 m.respondidoPor=firebaseUser?.uid||null;
+medidoresAbertos.delete(m.id);
 fecharRecusa();
 salvarLocal();
 await salvarCloud(entry);
@@ -1153,11 +1157,58 @@ function getFiltradas(){
 return entries.filter(e=>{
 const etapa=String(e.rotaDestino||'').trim();
 const etapaOk=filtroEtapa==='' || (filtroEtapa==='__sem_etapa__'?etapa==='':etapaValorNormalizado(etapa)===String(filtroEtapa));
-return etapaOk && entryMatchesSearch(e,filtroAtual.trim().toLowerCase());
+const pessoaOk=filtroPessoa==='' || (filtroPessoa==='__sem_nome__'?!normNome(e.solicitadoPor):normNome(e.solicitadoPor)===filtroPessoa);
+return etapaOk && pessoaOk && entryMatchesSearch(e,filtroAtual.trim().toLowerCase());
 });
 }
+/* ===== FILTRO POR QUEM LANÇOU ===== */
+// Monta a lista de nomes a partir do "Solicitado por" dos lançamentos.
+// Nomes iguais com maiúscula/acento diferente entram juntos.
+function pessoasLancamentos(){
+const mapa=new Map();
+let semNome=null;
+entries.forEach(e=>{
+const chave=normNome(e.solicitadoPor);
+const pend=(e.medidores||[]).some(m=>m.status==='pendente');
+if(!chave){ semNome=semNome||{pend:false}; if(pend)semNome.pend=true; return; }
+if(!mapa.has(chave))mapa.set(chave,{nome:String(e.solicitadoPor).trim().replace(/\s+/g,' '),pend:false});
+if(pend)mapa.get(chave).pend=true;
+});
+const lista=[...mapa.entries()].map(([chave,v])=>({chave,...v})).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+return {lista,semNome};
+}
+function renderFiltroPessoa(){
+const menu=$('filtroPessoaMenu'); if(!menu)return;
+const {lista,semNome}=pessoasLancamentos();
+// Se a pessoa escolhida não existe mais (lançamentos apagados), volta para Todos.
+if(filtroPessoa && filtroPessoa!=='__sem_nome__' && !lista.some(p=>p.chave===filtroPessoa))filtroPessoa='';
+if(filtroPessoa==='__sem_nome__' && !semNome)filtroPessoa='';
+const btn=(chave,rotulo,pend)=>`<button type="button" data-pessoa="${escapeHtml(chave)}" class="${filtroPessoa===chave?'ativa':''}">${rotulo}${pend?'<span class="pendente-dot" title="Tem medidor pendente"></span>':''}</button>`;
+menu.innerHTML=btn('','👥 Todos',false)+
+(lista.length?lista.map(p=>btn(p.chave,'👤 '+escapeHtml(p.nome),p.pend)).join(''):'<div class="filtro-pessoa-vazio">Ninguém lançou ainda.</div>')+
+(semNome?btn('__sem_nome__','❔ Sem nome',semNome.pend):'');
+menu.querySelectorAll('[data-pessoa]').forEach(b=>b.addEventListener('click',()=>{
+filtroPessoa=b.dataset.pessoa;
+fecharFiltroPessoa();
+renderEntries();
+}));
+const atual=filtroPessoa==='__sem_nome__'?'Sem nome':(lista.find(p=>p.chave===filtroPessoa)?.nome||'Todos');
+$('filtroPessoaNome').textContent=atual;
+}
+function fecharFiltroPessoa(){
+$('filtroPessoaMenu').classList.remove('open');
+$('filtroPessoaBtn').setAttribute('aria-expanded','false');
+}
+$('filtroPessoaBtn').addEventListener('click',()=>{
+const abrir=!$('filtroPessoaMenu').classList.contains('open');
+$('filtroPessoaMenu').classList.toggle('open',abrir);
+$('filtroPessoaBtn').setAttribute('aria-expanded',String(abrir));
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.filtro-pessoa-wrap'))fecharFiltroPessoa(); });
+
 function renderEntries(){
 atualizarRespostasUI();
+renderFiltroPessoa();
 const filtradas=getFiltradas();
 const termo=filtroAtual.trim().toLowerCase();
 const etapaBusca=etapaBuscaExata(termo);
@@ -1197,15 +1248,17 @@ ${lista.map(e=>`
 ${e.solicitadoPor?`<div class="entry-meta">👤 Solicitado por <strong>${escapeHtml(e.solicitadoPor)}</strong></div>`:''}
 <div class="entry-meta">
 ${(e.medidores||[]).map(m=>`
-<div class="meter-card">
-<div class="meter-head">
+<div class="meter-card${medidoresAbertos.has(m.id)?' aberto':''}">
+<button type="button" class="meter-head" data-toggle-mid="${escapeHtml(m.id)}" aria-expanded="${medidoresAbertos.has(m.id)}">
 <span class="medidor-status ${statusClass(m.status)}" title="${statusLabel(m.status)}"></span>
 <span class="meter-num">${m.livro?(e.parteLivro?'📖 ':'📚 '):''}${escapeHtml(m.numero)}</span>
 <span class="meter-status-text">${statusLabel(m.status)}</span>
-</div>
+<span class="meter-seta">▾</span>
+</button>
 ${m.status==='recusado'&&m.motivoRecusa?`<div class="recusa-info">⛔ Motivo: ${escapeHtml(m.motivoRecusa)}</div>`:''}
 ${m.transferidoPara?`<div class="transfer-info">↪ Transferido para ${formatDateBR(m.transferidoPara)}</div>`:''}
 ${m.origemData?`<div class="history-note">↩ Pendência transferida de ${formatDateBR(m.origemData)}</div>`:''}
+<div class="meter-body">
 <div class="meter-actions">
 <button data-action="limpar-marcacao" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}"><span class="dot-cinza"></span>Pendente</button>
 <button data-action="espelho" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">🔵 Espelho</button>
@@ -1217,6 +1270,7 @@ ${m.status!=='concluido'&&m.status!=='recusado'&&!m.transferidoPara?`<button dat
 <div class="meter-tools">
 <button type="button" class="meter-tool save" title="Salvar marcação" aria-label="Salvar marcação" data-action="salvar-marcacao" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">💾</button>
 <button type="button" class="meter-tool delete" title="Excluir este medidor" aria-label="Excluir este medidor" data-action="excluir-marcacao" data-id="${escapeHtml(e.id)}" data-mid="${escapeHtml(m.id)}">🗑️</button>
+</div>
 </div>
 </div>
 `).join('')}
@@ -1244,9 +1298,22 @@ const entry=entries.find(e=>e.id===container.dataset.entryId);
 if(!entry)return;
 container.querySelectorAll('img').forEach(img=>img.addEventListener('click',()=>abrirModalFoto(entry.fotos,Number(img.dataset.i))));
 });
+// Abrir/fechar o medidor sem redesenhar a lista toda.
+$('entriesList').querySelectorAll('[data-toggle-mid]').forEach(h=>{
+h.addEventListener('click',()=>{
+const mid=h.dataset.toggleMid;
+const card=h.closest('.meter-card');
+const abrir=!card.classList.contains('aberto');
+card.classList.toggle('aberto',abrir);
+h.setAttribute('aria-expanded',String(abrir));
+abrir?medidoresAbertos.add(mid):medidoresAbertos.delete(mid);
+});
+});
 $('entriesList').querySelectorAll('[data-action]').forEach(btn=>{
 btn.addEventListener('click',async()=>{
 const action=btn.dataset.action;
+// Escolheu uma cor: o medidor fecha sozinho.
+if(['limpar-marcacao','espelho','nao-realizado','concluido','transferir'].includes(action) && btn.dataset.mid)medidoresAbertos.delete(btn.dataset.mid);
 if(action==='recusar'){
 abrirRecusa(btn.dataset.id,btn.dataset.mid);
 return;
@@ -1327,7 +1394,7 @@ return;
 if(formularioTemDados() && !confirm('Tem informação no formulário que ainda não foi salva. Atualizar mesmo assim? (Os registros já salvos não são afetados.)'))return;
 const btn=$('updateAppBtn');
 btn.disabled=true;
-btn.textContent='⏳ Atualizando...';
+btn.textContent='⏳';
 try{
 if('serviceWorker' in navigator){
 const regs=await navigator.serviceWorker.getRegistrations();
