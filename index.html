@@ -12,7 +12,7 @@
 <meta name="application-name" content="Remanejamento de Rota">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Remanejamento de Rota</title>
-<link rel="stylesheet" href="estilo.css?v=2.14">
+<link rel="stylesheet" href="estilo.css?v=2.15">
 <style>
 .filtro-pessoa-wrap{margin-top:8px}
 .filtro-pessoa-btn{width:100%;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--accent-dim);border-radius:8px;background:var(--panel-2);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
@@ -80,6 +80,22 @@ label{margin:12px 0 5px}
 .entry-del,.entry-stage-btn{border:0;border-radius:999px;background:#e9e9eb;padding:6px 12px}
 .stage-title{border-radius:999px;padding:7px 14px;font-size:13.5px}
 .entry{padding:10px 12px}
+/* Abas A digitar / Digitados / Todos */
+.abas-digitado{display:flex;gap:4px;margin-top:8px;padding:3px;border-radius:999px;background:#e9e9eb}
+.abas-digitado button{flex:1;height:30px;padding:0 6px;border:0;border-radius:999px;background:transparent;color:#3a3a3c;font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.abas-digitado button.ativa{background:#fff;color:#1c1c1e;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* Lançamento recolhido: só quem pediu, data e medidores */
+.entry-head{width:100%;display:flex;align-items:center;gap:8px;padding:2px 2px 4px;border:0;background:transparent;font-family:-apple-system,system-ui,sans-serif;text-align:left;cursor:pointer}
+.entry-quem{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry-dia{font-size:12px;color:var(--text-dim);white-space:nowrap}
+.entry-dig{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#dcefdc;color:#2e7d32;font-size:12px;font-weight:800}
+.entry-seta{font-size:11px;color:var(--text-dim);transition:transform .15s}
+.entry.aberto .entry-seta{transform:rotate(180deg)}
+.entry-body{display:none;margin-top:6px}
+.entry.aberto .entry-body{display:block}
+.entry-body .entry-date{margin:0 0 4px}
+.entry .meter-card:first-child{margin-top:2px}
+@media print{.entry-body{display:block !important}.entry-head .entry-seta,.abas-digitado,.topo-linha{display:none !important}}
 </style>
 </head>
 <body>
@@ -136,6 +152,8 @@ label{margin:12px 0 5px}
 <li>Marcou a cor errada? Toque na cor certa, ou no botão <b>cinza Pendente</b> para voltar como estava.</li>
 <li>Em <b>👥 Quem lançou</b>, escolha um nome para ver só os lançamentos daquela pessoa. A bolinha laranja mostra quem ainda tem medidor pendente.</li>
 <li>Cada medidor aparece fechado numa linha. Toque nele (▾) para abrir as cores, o 💾 e a 🗑️. Ao escolher a cor, ele fecha sozinho.</li>
+<li>Cada lançamento mostra só quem pediu, a data e os medidores. Toque na linha de cima (▾) para ver rua, UC vizinha, fotos, <b>Marcar digitado</b>, <b>✏️ Editar</b> e <b>Excluir</b>.</li>
+<li>Abaixo da busca: <b>📝 A digitar</b> mostra o que falta digitar, <b>✅ Digitados</b> o que já foi, e <b>Todos</b> mostra tudo junto.</li>
 <li>No topo: <b>↗️</b> compartilha o app e <b>🔄</b> atualiza para a versão mais nova.</li>
 <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
 </ol>
@@ -231,11 +249,16 @@ label{margin:12px 0 5px}
 <button type="button" class="filtro-pessoa-btn" id="filtroPessoaBtn" aria-expanded="false">👥 Quem lançou: <b id="filtroPessoaNome">Todos</b> <span class="seta">▾</span></button>
 <div class="filtro-pessoa-menu" id="filtroPessoaMenu"></div>
 </div>
+<div class="abas-digitado" id="abasDigitado" role="tablist" aria-label="Digitados">
+<button type="button" role="tab" data-aba="a-digitar" class="ativa" aria-selected="true">📝 A digitar</button>
+<button type="button" role="tab" data-aba="digitados" aria-selected="false">✅ Digitados</button>
+<button type="button" role="tab" data-aba="todos" aria-selected="false">Todos</button>
+</div>
 </div>
 <div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.14 · 14/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.15 · 14/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -316,7 +339,7 @@ label{margin:12px 0 5px}
 </div>
 </div>
 <script>
-const APP_VERSAO='2.14';
+const APP_VERSAO='2.15';
 const APP_VERSAO_DATA='14/10/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20261014';
 if('serviceWorker' in navigator){
@@ -334,6 +357,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.14"></script>
+<script type="module" src="app.js?v=2.15"></script>
 </body>
 </html>

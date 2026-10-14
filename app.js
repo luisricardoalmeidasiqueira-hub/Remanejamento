@@ -546,6 +546,8 @@ let entries = [];
 let filtroAtual = '';
 let filtroEtapa = '';
 let filtroPessoa = '';
+const lancamentosAbertos = new Set(); // lançamentos com detalhes à mostra
+let abaDigitado = 'a-digitar'; // 'a-digitar' | 'digitados' | 'todos'
 const medidoresAbertos = new Set(); // medidores abertos (com as cores à mostra) // nome normalizado de quem lançou ('' = todos)
 let medidorValores = [''];
 let selectedFotos = [];
@@ -1158,9 +1160,18 @@ return entries.filter(e=>{
 const etapa=String(e.rotaDestino||'').trim();
 const etapaOk=filtroEtapa==='' || (filtroEtapa==='__sem_etapa__'?etapa==='':etapaValorNormalizado(etapa)===String(filtroEtapa));
 const pessoaOk=filtroPessoa==='' || (filtroPessoa==='__sem_nome__'?!normNome(e.solicitadoPor):normNome(e.solicitadoPor)===filtroPessoa);
-return etapaOk && pessoaOk && entryMatchesSearch(e,filtroAtual.trim().toLowerCase());
+const abaOk=abaDigitado==='todos' || (abaDigitado==='digitados'?!!e.digitado:!e.digitado);
+return etapaOk && pessoaOk && abaOk && entryMatchesSearch(e,filtroAtual.trim().toLowerCase());
 });
 }
+/* ===== ABAS: A DIGITAR / DIGITADOS / TODOS ===== */
+document.querySelectorAll('#abasDigitado [data-aba]').forEach(b=>{
+b.addEventListener('click',()=>{
+abaDigitado=b.dataset.aba;
+document.querySelectorAll('#abasDigitado [data-aba]').forEach(x=>{x.classList.toggle('ativa',x===b);x.setAttribute('aria-selected',String(x===b));});
+renderEntries();
+});
+});
 /* ===== FILTRO POR QUEM LANÇOU ===== */
 // Monta a lista de nomes a partir do "Solicitado por" dos lançamentos.
 // Nomes iguais com maiúscula/acento diferente entram juntos.
@@ -1217,7 +1228,7 @@ $('entryCount').textContent=filtradas.length;
 $('exportBtn').disabled=entries.length===0;
 $('printBtn').disabled=filtradas.length===0;
 if(!filtradas.length){
-$('entriesList').innerHTML=`<div class="empty">Nenhum registro encontrado.</div>`;
+$('entriesList').innerHTML=`<div class="empty">${abaDigitado==='a-digitar'&&!filtroAtual.trim()?'Nada para digitar aqui 👍':abaDigitado==='digitados'&&!filtroAtual.trim()?'Nenhum lançamento digitado aqui.':'Nenhum registro encontrado.'}</div>`;
 return;
 }
 const grupos=new Map();
@@ -1236,16 +1247,13 @@ return `
 <section class="stage-group${incluirImpressao?' print-include':''}" data-stage-key="${escapeHtml(key)}">
 <div class="stage-title"><span>${escapeHtml(etapaLabel(key))}</span><span class="stage-count">${lista.length} lançamento${lista.length===1?'':'s'} · ${qtdMedidores} medidor${qtdMedidores===1?'':'es'}</span></div>
 ${lista.map(e=>`
-<div class="entry${e.id===editandoId?' editando':''}">
-<div class="entry-top">
-<span class="entry-code">${e.medidores.length>1?'Medidores / UCs':'Medidor / UC'}</span>
-<div class="entry-top-actions">
-<button type="button" class="entry-edit-top" data-action="editar-registro" data-id="${escapeHtml(e.id)}" title="Editar lançamento" aria-label="Editar lançamento">✏️</button>
-<button type="button" class="entry-del entry-del-top" data-action="excluir-registro" data-id="${escapeHtml(e.id)}" title="Excluir lançamento inteiro" aria-label="Excluir lançamento inteiro">🗑️</button>
-</div>
-</div>
-<span class="entry-date">📅 ${formatDateBR(e.dataRegistro)} · lançado em ${formatDateHora(e.criadoEm)}</span>
-${e.solicitadoPor?`<div class="entry-meta">👤 Solicitado por <strong>${escapeHtml(e.solicitadoPor)}</strong></div>`:''}
+<div class="entry${e.id===editandoId?' editando':''}${lancamentosAbertos.has(e.id)?' aberto':''}${e.digitado?' digitado':''}">
+<button type="button" class="entry-head" data-toggle-entry="${escapeHtml(e.id)}" aria-expanded="${lancamentosAbertos.has(e.id)}" title="Mostrar/ocultar detalhes">
+<span class="entry-quem">👤 ${escapeHtml(e.solicitadoPor||'Sem nome')}</span>
+<span class="entry-dia">${formatDateBR(e.dataRegistro)}</span>
+${e.digitado?'<span class="entry-dig" title="Digitado">✓</span>':''}
+<span class="entry-seta">▾</span>
+</button>
 <div class="entry-meta">
 ${(e.medidores||[]).map(m=>`
 <div class="meter-card${medidoresAbertos.has(m.id)?' aberto':''}">
@@ -1275,6 +1283,8 @@ ${m.status!=='concluido'&&m.status!=='recusado'&&!m.transferidoPara?`<button dat
 </div>
 `).join('')}
 </div>
+<div class="entry-body">
+<div class="entry-date">📅 ${formatDateBR(e.dataRegistro)} · lançado em ${formatDateHora(e.criadoEm)}</div>
 ${e.vizinha?`<div class="entry-meta">UC vizinha <strong>${escapeHtml(e.vizinha)}</strong></div>`:''}
 ${e.livro?`<div class="entry-meta">Número do livro <strong>${escapeHtml(e.livro)}</strong></div>`:''}
 ${e.parteLivro?`<div class="livro-todo-tag">📖 Remanejar livro da sequência ${escapeHtml(e.seqInicio)} até a sequência ${escapeHtml(e.seqFim)}</div>`:e.livroTodo?`<div class="livro-todo-tag">📚 Remanejar o livro todo</div>`:''}
@@ -1287,7 +1297,9 @@ ${e.digitado&&e.digitadoEm?`<div class="entry-meta">Digitado em ${formatDateHora
 </div>
 <div class="entry-actions">
 ${!String(e.rotaDestino||'').trim()?`<button type="button" class="entry-stage-btn" data-action="definir-etapa" data-id="${escapeHtml(e.id)}">📌 Definir etapa</button>`:''}
+<button type="button" class="entry-stage-btn" data-action="editar-registro" data-id="${escapeHtml(e.id)}" title="Editar lançamento">✏️ Editar</button>
 <button type="button" class="entry-del" data-action="excluir-registro" data-id="${escapeHtml(e.id)}" title="Excluir lançamento inteiro">🗑️ Excluir lançamento</button>
+</div>
 </div>
 </div>
 `).join('')}
@@ -1297,6 +1309,17 @@ $('entriesList').querySelectorAll('.entry-fotos').forEach(container=>{
 const entry=entries.find(e=>e.id===container.dataset.entryId);
 if(!entry)return;
 container.querySelectorAll('img').forEach(img=>img.addEventListener('click',()=>abrirModalFoto(entry.fotos,Number(img.dataset.i))));
+});
+// Abrir/fechar os detalhes do lançamento.
+$('entriesList').querySelectorAll('[data-toggle-entry]').forEach(h=>{
+h.addEventListener('click',()=>{
+const id=h.dataset.toggleEntry;
+const card=h.closest('.entry');
+const abrir=!card.classList.contains('aberto');
+card.classList.toggle('aberto',abrir);
+h.setAttribute('aria-expanded',String(abrir));
+abrir?lancamentosAbertos.add(id):lancamentosAbertos.delete(id);
+});
 });
 // Abrir/fechar o medidor sem redesenhar a lista toda.
 $('entriesList').querySelectorAll('[data-toggle-mid]').forEach(h=>{
@@ -1325,7 +1348,9 @@ return;
 if(action==='digitado'){
 const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
 entry.digitado=!entry.digitado; entry.digitadoEm=entry.digitado?Date.now():null;
-salvarLocal(); await salvarCloud(entry); renderEntries(); return;
+salvarLocal(); await salvarCloud(entry); renderEntries();
+if(abaDigitado!=='todos'){ const st=$('statusMsg'); st.textContent=entry.digitado?'Movido para ✅ Digitados.':'Voltou para 📝 A digitar.'; st.style.color='var(--accent)'; setTimeout(()=>st.textContent='',2500); }
+return;
 }
 if(action==='transferir'){
 if(window.confirm('Transferir este medidor para o próximo mês? O histórico atual será mantido.')) transferirMedidor(btn.dataset.id,btn.dataset.mid);
