@@ -12,7 +12,7 @@
 <meta name="application-name" content="Remanejamento de Rota">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Remanejamento de Rota</title>
-<link rel="stylesheet" href="estilo.css?v=2.15">
+<link rel="stylesheet" href="estilo.css?v=2.16">
 <style>
 .filtro-pessoa-wrap{margin-top:8px}
 .filtro-pessoa-btn{width:100%;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--accent-dim);border-radius:8px;background:var(--panel-2);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
@@ -95,6 +95,54 @@ label{margin:12px 0 5px}
 .entry.aberto .entry-body{display:block}
 .entry-body .entry-date{margin:0 0 4px}
 .entry .meter-card:first-child{margin-top:2px}
+/* ===== Formulário compacto (2.16) ===== */
+.card{padding:12px 14px}
+label{margin:9px 0 4px;font-size:12px}
+input[type="text"],input[type="email"],input[type="password"]{height:34px;padding:0 14px}
+.medidor-row{margin-bottom:5px}
+.medidor-row input{height:34px}
+.medidor-status{width:14px;height:14px;flex:0 0 14px}
+.rm-medidor{width:34px;height:30px;font-size:13px}
+.select-wrap select,.select-wrap select.escolhida{height:32px;font-size:16px}
+input[type="date"]{height:30px;font-size:15px;font-weight:500}
+.tipo-opts{display:flex;gap:3px;padding:3px;border-radius:999px;background:#e9e9eb}
+.tipo-opts button{flex:1;height:28px;padding:0 4px;border:0;border-radius:999px;background:transparent;color:#3a3a3c;font-size:12.5px;font-weight:600;white-space:nowrap}
+.tipo-opts button.ativo{background:#fff;color:var(--accent);border:0;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.add-medidor-btn{height:28px;padding:0 12px;margin-top:2px;border:0;background:#eef4fb;font-size:12.5px}
+.seq-area{margin-top:6px;padding:8px;border-radius:16px}
+.mais-info{margin-top:10px;border-radius:16px;background:#f6f7f9}
+.mais-info summary{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;list-style:none;color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.mais-info summary::-webkit-details-marker{display:none}
+.mais-info summary::after{content:'▾';margin-left:auto;font-size:11px;color:var(--text-dim);transition:transform .15s}
+.mais-info[open] summary::after{transform:rotate(180deg)}
+.mais-info-dica{min-width:0;color:var(--text-dim);font-weight:500;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mais-info-tit{white-space:nowrap;flex:0 0 auto}
+.mais-info-corpo{padding:0 10px 10px}
+.mais-info-corpo label:first-child{margin-top:2px}
+.foto-btn{height:30px;padding:0 8px}
+textarea{min-height:56px;padding:9px 14px}
+.save-btn{height:40px;margin-top:12px}
+.status-msg{margin-top:6px}
+.dicas summary{padding:7px 14px}
+/* ===== Lista compacta (2.16) ===== */
+.stage-group{margin-bottom:12px}
+.stage-title{padding:5px 12px;margin-bottom:6px;font-size:13px}
+.stage-count{font-size:10.5px}
+.entry{padding:7px 9px;margin-bottom:7px}
+.entry-head{padding:0 2px 3px}
+.entry-quem{font-size:13px}
+.entry-dia{font-size:11.5px}
+.meter-card{margin-top:4px;border-radius:14px}
+.meter-head{gap:7px;padding:5px 10px}
+.meter-num{font-size:13.5px}
+.meter-status-text{font-size:10.5px}
+.meter-head .medidor-status{width:13px;height:13px;flex:0 0 13px;border-width:1.5px}
+.meter-actions button{padding:5px 9px;font-size:11.5px}
+.meter-tool{width:38px;height:28px;font-size:14px}
+.entry-body{font-size:12.5px}
+.entry-body .entry-meta{font-size:12px}
+.entry-status-btn{padding:6px 4px;font-size:11.5px}
+.entry-del,.entry-stage-btn{padding:5px 11px;font-size:11.5px}
 @media print{.entry-body{display:block !important}.entry-head .entry-seta,.abas-digitado,.topo-linha{display:none !important}}
 </style>
 </head>
@@ -147,7 +195,7 @@ label{margin:12px 0 5px}
 <li><b>Livro todo</b>: informe o número do livro. O medidor deixa de ser obrigatório.</li>
 <li><b>Por sequência</b>: para remanejar o livro <b>da sequência</b> tal <b>até a sequência</b> tal (ex.: da 1 até a 200). Informe o número do livro e as duas sequências. O medidor também deixa de ser obrigatório.</li>
 <li><b>Cliente</b>: digite o <b>número do medidor / UC</b> (obrigatório). Se for mais de um, toque em <b>+ Adicionar medidor</b>.</li>
-<li>UC vizinha, rua, fotos e observações ajudam a achar o local.</li>
+<li>UC vizinha, rua, fotos, observações e a data ficam em <b>➕ Mais informações</b>. A data já vem com o dia de hoje.</li>
 <li>Depois de salvo, o <b>✏️</b> no cartão serve para corrigir ou acrescentar medidores, e a <b>🗑️</b> ao lado de cada medidor tira só aquele número do lançamento.</li>
 <li>Marcou a cor errada? Toque na cor certa, ou no botão <b>cinza Pendente</b> para voltar como estava.</li>
 <li>Em <b>👥 Quem lançou</b>, escolha um nome para ver só os lançamentos daquela pessoa. A bolinha laranja mostra quem ainda tem medidor pendente.</li>
@@ -169,9 +217,9 @@ label{margin:12px 0 5px}
 <input type="text" id="solicitadoPor" placeholder="Nome de quem está pedindo" autocomplete="off" autocapitalize="words">
 <label style="margin-top:14px">Tipo de remanejamento</label>
 <div class="tipo-opts" id="tipoOpts" role="group" aria-label="Tipo de remanejamento">
-<button type="button" data-tipo="cliente" class="ativo">👤 Cliente</button>
-<button type="button" data-tipo="livro-todo">📚 Livro todo</button>
-<button type="button" data-tipo="parte-livro">📖 Por sequência</button>
+<button type="button" data-tipo="cliente" class="ativo">Cliente</button>
+<button type="button" data-tipo="livro-todo">Livro todo</button>
+<button type="button" data-tipo="parte-livro">Por sequência</button>
 </div>
 <label for="livro">Número do livro <span class="required" id="livroObrig" style="display:none">*</span></label>
 <input type="text" id="livro" placeholder="Ex: 008585" inputmode="numeric" autocomplete="off">
@@ -190,6 +238,9 @@ label{margin:12px 0 5px}
 <label>Número do medidor / UC <span class="required" id="medidorObrig">*</span><span class="check-hint" id="medidorOpc" style="display:none">(opcional — livro todo)</span></label>
 <div id="medidorList"></div>
 <button type="button" class="add-medidor-btn" id="addMedidorBtn">+ Adicionar medidor</button>
+<details class="mais-info" id="maisInfo">
+<summary><span class="mais-info-tit">➕ Mais informações</span><span class="mais-info-dica">data, vizinha, rua, fotos</span></summary>
+<div class="mais-info-corpo">
 <label for="dataRegistro">Data do registro</label>
 <div class="data-registro">
 <input type="date" id="dataRegistro">
@@ -208,6 +259,8 @@ label{margin:12px 0 5px}
 <div class="foto-preview" id="fotoPreview"></div>
 <label for="obs">Observações</label>
 <textarea id="obs" placeholder="Detalhes adicionais (opcional)"></textarea>
+</div>
+</details>
 <button class="save-btn" id="saveBtn">💾 Salvar registro</button>
 <button type="button" class="cancel-edit-btn" id="cancelEditBtn">✖ Cancelar edição</button>
 <div class="status-msg" id="statusMsg"></div>
@@ -258,7 +311,7 @@ label{margin:12px 0 5px}
 <div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.15 · 14/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.16 · 14/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -339,7 +392,7 @@ label{margin:12px 0 5px}
 </div>
 </div>
 <script>
-const APP_VERSAO='2.15';
+const APP_VERSAO='2.16';
 const APP_VERSAO_DATA='14/10/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20261014';
 if('serviceWorker' in navigator){
@@ -357,6 +410,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.15"></script>
+<script type="module" src="app.js?v=2.16"></script>
 </body>
 </html>

@@ -874,6 +874,7 @@ definirTipo('cliente');
 $('rua').value='';
 $('obs').value='';
 selectedFotos=[]; renderFotoPreview();
+if($('maisInfo'))$('maisInfo').open=false;
 }
 function atualizarModoEdicaoUI(){
 const editando=!!editandoId;
@@ -899,6 +900,7 @@ definirTipo(entry.parteLivro?'parte-livro':entry.livroTodo?'livro-todo':'cliente
 $('rua').value=entry.rua||'';
 $('obs').value=entry.obs||'';
 selectedFotos=[...(entry.fotos||[])];
+if($('maisInfo'))$('maisInfo').open=!!(entry.vizinha||entry.rua||entry.obs||(entry.fotos||[]).length||(entry.dataRegistro&&entry.dataRegistro!==todayStr()));
 renderFotoPreview();
 const etapa=etapaValorNormalizado(entry.rotaDestino);
 definirEtapa(etapa);
