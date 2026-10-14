@@ -12,7 +12,31 @@
 <meta name="application-name" content="Remanejamento de Rota">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Remanejamento de Rota</title>
-<link rel="stylesheet" href="estilo.css?v=2.11">
+<link rel="stylesheet" href="estilo.css?v=2.13">
+<style>
+.filtro-pessoa-wrap{margin-top:8px}
+.filtro-pessoa-btn{width:100%;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--accent-dim);border-radius:8px;background:var(--panel-2);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+.filtro-pessoa-btn b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filtro-pessoa-btn .seta{transition:transform .15s}
+.filtro-pessoa-btn[aria-expanded="true"] .seta{transform:rotate(180deg)}
+.filtro-pessoa-menu{display:none;flex-direction:column;gap:6px;margin-top:6px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.filtro-pessoa-menu.open{display:flex}
+.filtro-pessoa-menu button{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--text);font-family:-apple-system,system-ui,sans-serif;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.filtro-pessoa-menu button.ativa{background:rgba(25,118,210,.15);border-color:var(--accent);color:var(--accent)}
+.filtro-pessoa-menu .pendente-dot{margin-left:auto;width:9px;height:9px;border-radius:50%;background:#ef6c00;flex:0 0 9px}
+.filtro-pessoa-vazio{color:var(--text-dim);font-family:-apple-system,system-ui,sans-serif;font-size:12.5px;text-align:center;padding:8px}
+/* Seletores compactos, no mesmo estilo da "Data do registro" (pílula cinza) */
+.select-wrap::after{right:14px;font-size:11px;color:#3a3a3c}
+.select-wrap select,.select-wrap select.escolhida{height:36px;padding:0 30px;border:0;border-radius:999px;background:#e9e9eb;color:#1c1c1e;font-size:16px;font-weight:600;text-align:center;text-align-last:center}
+.select-wrap select:not(.escolhida){color:#6b6b70;font-weight:500}
+.select-wrap select:focus{outline:2px solid var(--accent);outline-offset:1px}
+input[type="date"]{height:36px;border:0;border-radius:999px;background:#e9e9eb;color:#1c1c1e;font-size:16px;font-weight:600}
+.filtro-controles{align-items:center}
+.filtro-etapa-btn{height:36px;padding:0 13px;border:0;border-radius:999px;background:#e9e9eb;color:#1c1c1e;font-size:14px;font-weight:600}
+.filtro-pessoa-btn{height:36px;padding:0 14px;justify-content:center;border:0;border-radius:999px;background:#e9e9eb;color:#1c1c1e;font-size:15px;font-weight:600}
+.filtro-pessoa-btn b{flex:0 1 auto}
+.filtro-pessoa-btn .seta{font-size:11px;color:#3a3a3c}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -65,6 +89,7 @@
 <li>UC vizinha, rua, fotos e observações ajudam a achar o local.</li>
 <li>Depois de salvo, o <b>✏️</b> no cartão serve para corrigir ou acrescentar medidores, e a <b>🗑️</b> ao lado de cada medidor tira só aquele número do lançamento.</li>
 <li>Marcou a cor errada? Toque na cor certa, ou no botão <b>cinza Pendente</b> para voltar como estava.</li>
+<li>Em <b>👥 Quem lançou</b>, escolha um nome para ver só os lançamentos daquela pessoa. A bolinha laranja mostra quem ainda tem medidor pendente.</li>
 <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
 </ol>
 <div class="dicas-legenda"><span class="dot-cinza"></span>Pendente (ainda não feito) · 🔵 Espelho · 🔴 Não realizado · 🟢 Concluído · ⛔ Recusado (com motivo) · 📅 Próximo mês</div>
@@ -155,11 +180,15 @@
 </div>
 </div>
 </div>
+<div class="filtro-pessoa-wrap">
+<button type="button" class="filtro-pessoa-btn" id="filtroPessoaBtn" aria-expanded="false">👥 Quem lançou: <b id="filtroPessoaNome">Todos</b> <span class="seta">▾</span></button>
+<div class="filtro-pessoa-menu" id="filtroPessoaMenu"></div>
+</div>
 </div>
 <div class="export-actions"><button class="export-btn" id="exportBtn">Exportar registros (CSV)</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir todos por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.11 · 07/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.13 · 14/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -240,9 +269,9 @@
 </div>
 </div>
 <script>
-const APP_VERSAO='2.11';
-const APP_VERSAO_DATA='07/10/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20261007';
+const APP_VERSAO='2.13';
+const APP_VERSAO_DATA='14/10/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20261014';
 if('serviceWorker' in navigator){
 window.addEventListener('load',()=>{
 navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -258,6 +287,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.11"></script>
+<script type="module" src="app.js?v=2.13"></script>
 </body>
 </html>
