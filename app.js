@@ -550,6 +550,13 @@ const lancamentosAbertos = new Set(); // lançamentos com detalhes à mostra
 const medidoresTodos = new Set(); // lançamentos com a lista de medidores toda aberta
 const LIMITE_MEDIDORES = 4;
 let imprimindo = false;
+const etapasAbertas = new Set(); // etapas abertas na lista (fechadas por padrão)
+// Abre sozinha quando há busca, filtro de etapa, impressão ou um lançamento em edição.
+function etapaAberta(key){
+if(imprimindo || filtroAtual.trim() || filtroEtapa)return true;
+if(editandoId && entries.some(e=>e.id===editandoId && (String(e.rotaDestino||'').trim()||'__sem_etapa__')===key))return true;
+return etapasAbertas.has(key);
+}
 const medidoresAbertosLanc = new Set(); // lançamentos com a lista de medidores à mostra
 function medidoresVisiveis(e){ return imprimindo || !!filtroAtual.trim() || medidoresAbertosLanc.has(e.id); }
 function mostrarTodosMedidores(e){ return imprimindo || medidoresTodos.has(e.id) || !!filtroAtual.trim(); } // acima disso, mostra só os primeiros e um botão "Ver todos"
@@ -1268,8 +1275,9 @@ $('entriesList').innerHTML=[...grupos.entries()].map(([key,lista])=>{
 const qtdMedidores=lista.reduce((total,e)=>total+(e.medidores||[]).length,0);
 const incluirImpressao=etapaEfetiva==='' || (etapaEfetiva==='__sem_etapa__'?key==='__sem_etapa__':etapaValorNormalizado(key)===String(etapaEfetiva));
 return `
-<section class="stage-group${incluirImpressao?' print-include':''}" data-stage-key="${escapeHtml(key)}">
-<div class="stage-title"><span>${escapeHtml(etapaLabel(key))}</span><span class="stage-count">${lista.length} lançamento${lista.length===1?'':'s'} · ${qtdMedidores} medidor${qtdMedidores===1?'':'es'}</span></div>
+<section class="stage-group${incluirImpressao?' print-include':''}${etapaAberta(key)?' aberta':''}" data-stage-key="${escapeHtml(key)}">
+<button type="button" class="stage-title" data-stage-toggle="${escapeHtml(key)}" aria-expanded="${etapaAberta(key)}"><span class="stage-nome">${escapeHtml(etapaLabel(key))}</span><span class="stage-count">${lista.length} lanç. · ${qtdMedidores} med.</span>${lista.some(e=>(e.medidores||[]).some(m=>m.status==='pendente'))?'<span class="stage-pend" title="Tem medidor pendente"></span>':''}<span class="stage-seta">▾</span></button>
+<div class="stage-body">
 ${lista.map(e=>`
 <div class="entry${e.id===editandoId?' editando':''}${lancamentosAbertos.has(e.id)?' aberto':''}${e.digitado?' digitado':''}${medidoresVisiveis(e)?' meds-abertos':''}">
 <button type="button" class="entry-head" data-toggle-entry="${escapeHtml(e.id)}" aria-expanded="${lancamentosAbertos.has(e.id)}" title="Mostrar/ocultar detalhes">
@@ -1325,12 +1333,23 @@ ${!String(e.rotaDestino||'').trim()?`<button type="button" class="entry-stage-bt
 </div>
 </div>
 `).join('')}
+</div>
 </section>`;
 }).join('');
 $('entriesList').querySelectorAll('.entry-fotos').forEach(container=>{
 const entry=entries.find(e=>e.id===container.dataset.entryId);
 if(!entry)return;
 container.querySelectorAll('img').forEach(img=>img.addEventListener('click',()=>abrirModalFoto(entry.fotos,Number(img.dataset.i))));
+});
+$('entriesList').querySelectorAll('[data-stage-toggle]').forEach(b=>{
+b.addEventListener('click',()=>{
+const key=b.dataset.stageToggle;
+const sec=b.closest('.stage-group');
+const abrir=!sec.classList.contains('aberta');
+sec.classList.toggle('aberta',abrir);
+b.setAttribute('aria-expanded',String(abrir));
+abrir?etapasAbertas.add(key):etapasAbertas.delete(key);
+});
 });
 $('entriesList').querySelectorAll('[data-meds]').forEach(b=>{
 b.addEventListener('click',()=>{

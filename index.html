@@ -12,7 +12,7 @@
 <meta name="application-name" content="Remanejamento de Rota">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Remanejamento de Rota</title>
-<link rel="stylesheet" href="estilo.css?v=2.18">
+<link rel="stylesheet" href="estilo.css?v=2.19">
 <style>
 .filtro-pessoa-wrap{margin-top:8px}
 .filtro-pessoa-btn{width:100%;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--accent-dim);border-radius:8px;background:var(--panel-2);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
@@ -159,6 +159,19 @@ textarea{min-height:56px;padding:9px 14px}
 .meds-seta{font-size:11px;transition:transform .15s}
 .entry.meds-abertos .meds-seta{transform:rotate(180deg)}
 .meds-pend{width:8px;height:8px;margin-left:auto;border-radius:50%;background:#ef6c00}
+/* Etapas em pílula pequena, fechadas até tocar (2.19) */
+.stage-group{margin-bottom:6px}
+.stage-title{width:100%;display:flex;align-items:center;gap:8px;height:34px;margin:0;padding:0 14px;border:0;border-radius:999px;background:#e9e9eb;color:#1c1c1e;font-family:-apple-system,system-ui,sans-serif;font-size:14px;font-weight:700;text-align:left;cursor:pointer}
+.stage-nome{white-space:nowrap}
+.stage-count{flex:1;text-align:right;font-size:11px;font-weight:600;color:#6b6b70;opacity:1;white-space:nowrap}
+.stage-pend{width:8px;height:8px;border-radius:50%;background:#ef6c00;flex:0 0 8px}
+.stage-seta{font-size:11px;color:#3a3a3c;transition:transform .15s}
+.stage-group.aberta .stage-title{background:var(--accent);color:#fff}
+.stage-group.aberta .stage-count,.stage-group.aberta .stage-seta{color:#fff}
+.stage-group.aberta .stage-seta{transform:rotate(180deg)}
+.stage-body{display:none;padding-top:6px}
+.stage-group.aberta .stage-body{display:block}
+@media print{.stage-body{display:block !important}.stage-seta,.stage-pend{display:none !important}}
 @media print{.meds-toggle{display:none !important}.lista-medidores{display:block !important}}
 @media print{.ver-todos-btn,.entry-detalhes{display:none !important}}
 @media print{.entry-body{display:block !important}.entry-head .entry-seta,.abas-digitado,.topo-linha{display:none !important}}
@@ -218,6 +231,7 @@ textarea{min-height:56px;padding:9px 14px}
 <li>Marcou a cor errada? Toque na cor certa, ou no botão <b>cinza Pendente</b> para voltar como estava.</li>
 <li>Em <b>👥 Quem lançou</b>, escolha um nome para ver só os lançamentos daquela pessoa. A bolinha laranja mostra quem ainda tem medidor pendente.</li>
 <li>Cada medidor aparece fechado numa linha. Toque nele (▾) para abrir as cores, o 💾 e a 🗑️. Ao escolher a cor, ele fecha sozinho.</li>
+<li>As etapas aparecem fechadas, em pílulas. Toque na etapa (▾) para abrir os lançamentos dela. A bolinha laranja mostra que tem medidor pendente naquela etapa.</li>
 <li>Cada lançamento mostra quem pediu, a data, o <b>📚 livro</b> (e a sequência), a vizinha, a rua, a observação e os medidores. Os medidores ficam guardados: toque em <b>▾ Ver medidores</b> para abrir. A bolinha laranja mostra que ainda tem medidor pendente. Ao buscar um número, eles abrem sozinhos.</li>
 <li>Toque em <b>Detalhes ▾</b> para ver fotos, <b>Marcar digitado</b>, <b>✏️ Editar</b> e <b>Excluir</b>.</li>
 <li>Abaixo da busca: <b>📝 A digitar</b> mostra o que falta digitar, <b>✅ Digitados</b> o que já foi, e <b>Todos</b> mostra tudo junto.</li>
@@ -330,7 +344,7 @@ textarea{min-height:56px;padding:9px 14px}
 <div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.18 · 15/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.19 · 15/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -411,7 +425,7 @@ textarea{min-height:56px;padding:9px 14px}
 </div>
 </div>
 <script>
-const APP_VERSAO='2.18';
+const APP_VERSAO='2.19';
 const APP_VERSAO_DATA='15/10/2026';
 const PWA_BUILD='v'+APP_VERSAO+'-20261015';
 if('serviceWorker' in navigator){
@@ -429,6 +443,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.18"></script>
+<script type="module" src="app.js?v=2.19"></script>
 </body>
 </html>
