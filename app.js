@@ -550,6 +550,8 @@ const lancamentosAbertos = new Set(); // lançamentos com detalhes à mostra
 const medidoresTodos = new Set(); // lançamentos com a lista de medidores toda aberta
 const LIMITE_MEDIDORES = 4;
 let imprimindo = false;
+const medidoresAbertosLanc = new Set(); // lançamentos com a lista de medidores à mostra
+function medidoresVisiveis(e){ return imprimindo || !!filtroAtual.trim() || medidoresAbertosLanc.has(e.id); }
 function mostrarTodosMedidores(e){ return imprimindo || medidoresTodos.has(e.id) || !!filtroAtual.trim(); } // acima disso, mostra só os primeiros e um botão "Ver todos"
 let abaDigitado = 'a-digitar'; // 'a-digitar' | 'digitados' | 'todos'
 const medidoresAbertos = new Set(); // medidores abertos (com as cores à mostra) // nome normalizado de quem lançou ('' = todos)
@@ -1269,7 +1271,7 @@ return `
 <section class="stage-group${incluirImpressao?' print-include':''}" data-stage-key="${escapeHtml(key)}">
 <div class="stage-title"><span>${escapeHtml(etapaLabel(key))}</span><span class="stage-count">${lista.length} lançamento${lista.length===1?'':'s'} · ${qtdMedidores} medidor${qtdMedidores===1?'':'es'}</span></div>
 ${lista.map(e=>`
-<div class="entry${e.id===editandoId?' editando':''}${lancamentosAbertos.has(e.id)?' aberto':''}${e.digitado?' digitado':''}">
+<div class="entry${e.id===editandoId?' editando':''}${lancamentosAbertos.has(e.id)?' aberto':''}${e.digitado?' digitado':''}${medidoresVisiveis(e)?' meds-abertos':''}">
 <button type="button" class="entry-head" data-toggle-entry="${escapeHtml(e.id)}" aria-expanded="${lancamentosAbertos.has(e.id)}" title="Mostrar/ocultar detalhes">
 <span class="entry-quem">👤 ${escapeHtml(e.solicitadoPor||'Sem nome')}</span>
 <span class="entry-dia">${formatDateBR(e.dataRegistro)}</span>
@@ -1277,7 +1279,8 @@ ${e.digitado?'<span class="entry-dig" title="Digitado">✓</span>':''}
 <span class="entry-detalhes">Detalhes <span class="entry-seta">▾</span></span>
 </button>
 ${infoLancamento(e)}
-<div class="entry-meta">
+${!imprimindo&&!filtroAtual.trim()?`<button type="button" class="meds-toggle" data-meds="${escapeHtml(e.id)}" aria-expanded="${medidoresVisiveis(e)}"><span class="meds-seta">▾</span> ${medidoresVisiveis(e)?'Esconder medidores':'Ver medidores'}${(e.medidores||[]).some(m=>m.status==='pendente')?'<span class="meds-pend" title="Tem medidor pendente"></span>':''}</button>`:''}
+<div class="entry-meta lista-medidores">
 ${(e.medidores||[]).map((m,idxM)=>idxM>=LIMITE_MEDIDORES&&!mostrarTodosMedidores(e)?'':`
 <div class="meter-card${medidoresAbertos.has(m.id)?' aberto':''}">
 <button type="button" class="meter-head" data-toggle-mid="${escapeHtml(m.id)}" aria-expanded="${medidoresAbertos.has(m.id)}">
@@ -1328,6 +1331,13 @@ $('entriesList').querySelectorAll('.entry-fotos').forEach(container=>{
 const entry=entries.find(e=>e.id===container.dataset.entryId);
 if(!entry)return;
 container.querySelectorAll('img').forEach(img=>img.addEventListener('click',()=>abrirModalFoto(entry.fotos,Number(img.dataset.i))));
+});
+$('entriesList').querySelectorAll('[data-meds]').forEach(b=>{
+b.addEventListener('click',()=>{
+const id=b.dataset.meds;
+medidoresAbertosLanc.has(id)?medidoresAbertosLanc.delete(id):medidoresAbertosLanc.add(id);
+renderEntries();
+});
 });
 $('entriesList').querySelectorAll('[data-ver-todos]').forEach(b=>{
 b.addEventListener('click',()=>{
