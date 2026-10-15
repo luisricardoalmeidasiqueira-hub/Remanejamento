@@ -547,6 +547,10 @@ let filtroAtual = '';
 let filtroEtapa = '';
 let filtroPessoa = '';
 const lancamentosAbertos = new Set(); // lançamentos com detalhes à mostra
+const medidoresTodos = new Set(); // lançamentos com a lista de medidores toda aberta
+const LIMITE_MEDIDORES = 4;
+let imprimindo = false;
+function mostrarTodosMedidores(e){ return imprimindo || medidoresTodos.has(e.id) || !!filtroAtual.trim(); } // acima disso, mostra só os primeiros e um botão "Ver todos"
 let abaDigitado = 'a-digitar'; // 'a-digitar' | 'digitados' | 'todos'
 const medidoresAbertos = new Set(); // medidores abertos (com as cores à mostra) // nome normalizado de quem lançou ('' = todos)
 let medidorValores = [''];
@@ -1219,6 +1223,22 @@ $('filtroPessoaBtn').setAttribute('aria-expanded',String(abrir));
 });
 document.addEventListener('click',e=>{ if(!e.target.closest('.filtro-pessoa-wrap'))fecharFiltroPessoa(); });
 
+// Informações principais do lançamento, sempre à mostra (livro, sequência, vizinha, rua, obs.)
+function infoLancamento(e){
+const itens=[];
+if(e.livro){
+let t=`📚 Livro <b>${escapeHtml(e.livro)}</b>`;
+if(e.parteLivro)t+=` · da seq. <b>${escapeHtml(e.seqInicio)}</b> até a <b>${escapeHtml(e.seqFim)}</b>`;
+else if(e.livroTodo)t+=` · <b>livro todo</b>`;
+itens.push(t);
+}
+if(e.vizinha)itens.push(`🔗 Vizinha <b>${escapeHtml(e.vizinha)}</b>`);
+if(e.rua)itens.push(`📍 ${escapeHtml(e.rua)}`);
+const linhas=itens.map(t=>`<span class="info-chip">${t}</span>`).join('');
+const obs=e.obs?`<div class="info-obs">📝 ${escapeHtml(e.obs)}</div>`:'';
+if(!linhas&&!obs)return '';
+return `<div class="entry-info">${linhas?`<div class="info-chips">${linhas}</div>`:''}${obs}</div>`;
+}
 function renderEntries(){
 atualizarRespostasUI();
 renderFiltroPessoa();
@@ -1254,10 +1274,11 @@ ${lista.map(e=>`
 <span class="entry-quem">👤 ${escapeHtml(e.solicitadoPor||'Sem nome')}</span>
 <span class="entry-dia">${formatDateBR(e.dataRegistro)}</span>
 ${e.digitado?'<span class="entry-dig" title="Digitado">✓</span>':''}
-<span class="entry-seta">▾</span>
+<span class="entry-detalhes">Detalhes <span class="entry-seta">▾</span></span>
 </button>
+${infoLancamento(e)}
 <div class="entry-meta">
-${(e.medidores||[]).map(m=>`
+${(e.medidores||[]).map((m,idxM)=>idxM>=LIMITE_MEDIDORES&&!mostrarTodosMedidores(e)?'':`
 <div class="meter-card${medidoresAbertos.has(m.id)?' aberto':''}">
 <button type="button" class="meter-head" data-toggle-mid="${escapeHtml(m.id)}" aria-expanded="${medidoresAbertos.has(m.id)}">
 <span class="medidor-status ${statusClass(m.status)}" title="${statusLabel(m.status)}"></span>
@@ -1284,14 +1305,10 @@ ${m.status!=='concluido'&&m.status!=='recusado'&&!m.transferidoPara?`<button dat
 </div>
 </div>
 `).join('')}
+${(e.medidores||[]).length>LIMITE_MEDIDORES&&!filtroAtual.trim()&&!imprimindo?`<button type="button" class="ver-todos-btn" data-ver-todos="${escapeHtml(e.id)}">${medidoresTodos.has(e.id)?'▴ Mostrar menos medidores':'▾ Ver todos os medidores'}</button>`:''}
 </div>
 <div class="entry-body">
 <div class="entry-date">📅 ${formatDateBR(e.dataRegistro)} · lançado em ${formatDateHora(e.criadoEm)}</div>
-${e.vizinha?`<div class="entry-meta">UC vizinha <strong>${escapeHtml(e.vizinha)}</strong></div>`:''}
-${e.livro?`<div class="entry-meta">Número do livro <strong>${escapeHtml(e.livro)}</strong></div>`:''}
-${e.parteLivro?`<div class="livro-todo-tag">📖 Remanejar livro da sequência ${escapeHtml(e.seqInicio)} até a sequência ${escapeHtml(e.seqFim)}</div>`:e.livroTodo?`<div class="livro-todo-tag">📚 Remanejar o livro todo</div>`:''}
-${e.rua?`<div class="entry-meta">Rua: <strong>${escapeHtml(e.rua)}</strong></div>`:''}
-${e.obs?`<div class="entry-obs">${escapeHtml(e.obs)}</div>`:''}
 ${e.fotos.length?`<div class="entry-fotos" data-entry-id="${escapeHtml(e.id)}">${e.fotos.map((f,i)=>`<img src="${f}" data-i="${i}" alt="Foto">`).join('')}</div>`:''}
 ${e.digitado&&e.digitadoEm?`<div class="entry-meta">Digitado em ${formatDateHora(e.digitadoEm)}</div>`:''}
 <div class="entry-status-row">
@@ -1311,6 +1328,13 @@ $('entriesList').querySelectorAll('.entry-fotos').forEach(container=>{
 const entry=entries.find(e=>e.id===container.dataset.entryId);
 if(!entry)return;
 container.querySelectorAll('img').forEach(img=>img.addEventListener('click',()=>abrirModalFoto(entry.fotos,Number(img.dataset.i))));
+});
+$('entriesList').querySelectorAll('[data-ver-todos]').forEach(b=>{
+b.addEventListener('click',()=>{
+const id=b.dataset.verTodos;
+medidoresTodos.has(id)?medidoresTodos.delete(id):medidoresTodos.add(id);
+renderEntries();
+});
 });
 // Abrir/fechar os detalhes do lançamento.
 $('entriesList').querySelectorAll('[data-toggle-entry]').forEach(h=>{
@@ -1632,7 +1656,8 @@ $('printBtn').addEventListener('click',()=>{
 const filtradas=getFiltradas();
 if(!filtradas.length){alert('Nenhum registro para imprimir.');return;}
 document.body.classList.add('print-stage-mode');
-window.addEventListener('afterprint',()=>document.body.classList.remove('print-stage-mode'),{once:true});
+imprimindo=true; renderEntries();
+window.addEventListener('afterprint',()=>{document.body.classList.remove('print-stage-mode');imprimindo=false;renderEntries();},{once:true});
 window.print();
 });
 $('adminBtn').addEventListener('click',async()=>{

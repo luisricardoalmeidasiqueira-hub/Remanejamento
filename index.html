@@ -12,7 +12,7 @@
 <meta name="application-name" content="Remanejamento de Rota">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Remanejamento de Rota</title>
-<link rel="stylesheet" href="estilo.css?v=2.16">
+<link rel="stylesheet" href="estilo.css?v=2.17">
 <style>
 .filtro-pessoa-wrap{margin-top:8px}
 .filtro-pessoa-btn{width:100%;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--accent-dim);border-radius:8px;background:var(--panel-2);color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
@@ -143,6 +143,16 @@ textarea{min-height:56px;padding:9px 14px}
 .entry-body .entry-meta{font-size:12px}
 .entry-status-btn{padding:6px 4px;font-size:11.5px}
 .entry-del,.entry-stage-btn{padding:5px 11px;font-size:11.5px}
+/* ===== Informações sempre à mostra (2.17) ===== */
+.entry-info{margin:0 0 4px;font-family:-apple-system,system-ui,sans-serif}
+.info-chips{display:flex;flex-wrap:wrap;gap:4px}
+.info-chip{padding:3px 9px;border-radius:999px;background:#eef4fb;color:#183247;font-size:12px;line-height:1.35}
+.info-chip b{color:var(--accent)}
+.info-obs{margin-top:4px;padding:4px 10px;border-radius:12px;background:#fff8e1;color:#5d4500;font-size:12px;line-height:1.35}
+.entry-detalhes{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:999px;background:#e9e9eb;color:#3a3a3c;font-size:11px;font-weight:600;white-space:nowrap}
+.entry.aberto .entry-detalhes{background:#dbe8f7;color:var(--accent)}
+.ver-todos-btn{display:block;width:100%;height:28px;margin-top:4px;border:0;border-radius:999px;background:#eef4fb;color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer}
+@media print{.ver-todos-btn,.entry-detalhes{display:none !important}}
 @media print{.entry-body{display:block !important}.entry-head .entry-seta,.abas-digitado,.topo-linha{display:none !important}}
 </style>
 </head>
@@ -200,7 +210,8 @@ textarea{min-height:56px;padding:9px 14px}
 <li>Marcou a cor errada? Toque na cor certa, ou no botão <b>cinza Pendente</b> para voltar como estava.</li>
 <li>Em <b>👥 Quem lançou</b>, escolha um nome para ver só os lançamentos daquela pessoa. A bolinha laranja mostra quem ainda tem medidor pendente.</li>
 <li>Cada medidor aparece fechado numa linha. Toque nele (▾) para abrir as cores, o 💾 e a 🗑️. Ao escolher a cor, ele fecha sozinho.</li>
-<li>Cada lançamento mostra só quem pediu, a data e os medidores. Toque na linha de cima (▾) para ver rua, UC vizinha, fotos, <b>Marcar digitado</b>, <b>✏️ Editar</b> e <b>Excluir</b>.</li>
+<li>Cada lançamento mostra quem pediu, a data, o <b>📚 livro</b> (e a sequência), a vizinha, a rua, a observação e os medidores. Com muitos medidores, aparecem os primeiros e o botão <b>▾ Ver todos os medidores</b>.</li>
+<li>Toque em <b>Detalhes ▾</b> para ver fotos, <b>Marcar digitado</b>, <b>✏️ Editar</b> e <b>Excluir</b>.</li>
 <li>Abaixo da busca: <b>📝 A digitar</b> mostra o que falta digitar, <b>✅ Digitados</b> o que já foi, e <b>Todos</b> mostra tudo junto.</li>
 <li>No topo: <b>↗️</b> compartilha o app e <b>🔄</b> atualiza para a versão mais nova.</li>
 <li>Quando o pedido for respondido, aparece o <b>🔔</b> no topo com o resultado.</li>
@@ -311,7 +322,7 @@ textarea{min-height:56px;padding:9px 14px}
 <div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.16 · 14/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.17 · 15/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -392,9 +403,9 @@ textarea{min-height:56px;padding:9px 14px}
 </div>
 </div>
 <script>
-const APP_VERSAO='2.16';
-const APP_VERSAO_DATA='14/10/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20261014';
+const APP_VERSAO='2.17';
+const APP_VERSAO_DATA='15/10/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20261015';
 if('serviceWorker' in navigator){
 window.addEventListener('load',()=>{
 navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -410,6 +421,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.16"></script>
+<script type="module" src="app.js?v=2.17"></script>
 </body>
 </html>
