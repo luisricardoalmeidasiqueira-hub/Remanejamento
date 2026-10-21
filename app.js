@@ -764,6 +764,56 @@ if(!b.dataset.motivo)$('recusaMotivo').focus();
 $('recusaConfirmarBtn').addEventListener('click',confirmarRecusa);
 $('recusaCancelarBtn').addEventListener('click',fecharRecusa);
 $('recusaModal').addEventListener('click',e=>{ if(e.target.id==='recusaModal')fecharRecusa(); });
+
+/* ===== EDIÇÃO RÁPIDA: número do livro e vizinha (2.20) ===== */
+let livroAlvo=null;
+function abrirEditarLivro(entryId){
+const entry=entries.find(e=>e.id===entryId); if(!entry)return;
+livroAlvo=entryId;
+const meds=(entry.medidores||[]).filter(m=>!m.livro).map(m=>m.numero);
+$('livroRapidoInfo').textContent=`${etapaLabel(entry.rotaDestino)}${entry.solicitadoPor?' · '+entry.solicitadoPor:''}${meds.length?' · '+meds.slice(0,2).join(', ')+(meds.length>2?'…':''):''}`;
+$('livroRapidoNum').value=entry.livro||'';
+$('livroRapidoViz').value=entry.vizinha||'';
+$('livroRapidoMsg').textContent='';
+$('livroRapidoModal').classList.add('open');
+setTimeout(()=>$('livroRapidoNum').focus(),150);
+}
+function fecharEditarLivro(){
+livroAlvo=null;
+$('livroRapidoModal').classList.remove('open');
+}
+async function salvarEditarLivro(){
+const entry=entries.find(e=>e.id===livroAlvo);
+if(!entry){ fecharEditarLivro(); return; }
+const livro=$('livroRapidoNum').value.trim();
+const vizinha=$('livroRapidoViz').value.trim();
+// Livro todo / por sequência dependem do número do livro.
+if(!livro && (entry.livroTodo||entry.parteLivro)){
+$('livroRapidoMsg').textContent='Este lançamento é de livro, o número do livro não pode ficar vazio.';
+return;
+}
+const copia=JSON.parse(JSON.stringify(entry));
+entry.livro=livro;
+entry.vizinha=vizinha;
+// Se o lançamento tem o item do livro (livro todo / sequência), atualiza o texto dele também.
+const itLivro=(entry.medidores||[]).find(m=>m.livro);
+if(itLivro && livro) itLivro.numero=textoItemLivro(livro,!!entry.parteLivro,entry.seqInicio,entry.seqFim);
+entry.editadoEm=Date.now();
+if(!salvarLocal()){
+Object.keys(entry).forEach(k=>delete entry[k]); Object.assign(entry,copia);
+$('livroRapidoMsg').textContent='Não foi possível salvar. Tente de novo.';
+return;
+}
+fecharEditarLivro();
+const okNuvem=firebaseDB ? await salvarCloud(entry) : true;
+renderEntries();
+const st=$('statusMsg'); st.textContent=okNuvem?'Livro e vizinha salvos.':'Salvo no aparelho, mas não no Firebase.'; st.style.color=okNuvem?'var(--accent)':'var(--red)'; setTimeout(()=>st.textContent='',2500);
+}
+$('livroRapidoSalvarBtn').addEventListener('click',salvarEditarLivro);
+$('livroRapidoCancelarBtn').addEventListener('click',fecharEditarLivro);
+$('livroRapidoModal').addEventListener('click',e=>{ if(e.target.id==='livroRapidoModal')fecharEditarLivro(); });
+$('livroRapidoNum').addEventListener('keydown',e=>{ if(e.key==='Enter')salvarEditarLivro(); });
+$('livroRapidoViz').addEventListener('keydown',e=>{ if(e.key==='Enter')salvarEditarLivro(); });
 function renderMedidorRows(){
 $('medidorList').innerHTML = medidorValores.map((val,i)=>`
 <div class="medidor-row">
@@ -1243,7 +1293,9 @@ itens.push(t);
 }
 if(e.vizinha)itens.push(`🔗 Vizinha <b>${escapeHtml(e.vizinha)}</b>`);
 if(e.rua)itens.push(`📍 ${escapeHtml(e.rua)}`);
-const linhas=itens.map(t=>`<span class="info-chip">${t}</span>`).join('');
+// Lápis rápido: abre só "Número do livro" e "Vizinha", sem a edição completa (2.20).
+const lapis=imprimindo?'':`<button type="button" class="info-chip info-edit" data-action="editar-livro" data-id="${escapeHtml(e.id)}" title="Editar livro e vizinha" aria-label="Editar número do livro e vizinha">✏️${e.livro?'':' Livro'}</button>`;
+const linhas=itens.map(t=>`<span class="info-chip">${t}</span>`).join('')+lapis;
 const obs=e.obs?`<div class="info-obs">📝 ${escapeHtml(e.obs)}</div>`:'';
 if(!linhas&&!obs)return '';
 return `<div class="entry-info">${linhas?`<div class="info-chips">${linhas}</div>`:''}${obs}</div>`;
@@ -1398,6 +1450,10 @@ return;
 }
 if(action==='editar-registro'){
 iniciarEdicao(btn.dataset.id);
+return;
+}
+if(action==='editar-livro'){
+abrirEditarLivro(btn.dataset.id);
 return;
 }
 if(action==='digitado'){

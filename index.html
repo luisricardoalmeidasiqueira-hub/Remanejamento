@@ -171,6 +171,12 @@ textarea{min-height:56px;padding:9px 14px}
 .stage-group.aberta .stage-seta{transform:rotate(180deg)}
 .stage-body{display:none;padding-top:6px}
 .stage-group.aberta .stage-body{display:block}
+/* Lápis rápido do livro/vizinha (2.20) */
+.info-edit{border:0;background:#dbe8f7;color:var(--accent);font-family:-apple-system,system-ui,sans-serif;font-weight:700;cursor:pointer}
+.info-edit:active{transform:scale(.95)}
+#livroRapidoModal input{width:100%}
+#livroRapidoModal label:first-of-type{margin-top:8px}
+@media print{.info-edit{display:none !important}}
 @media print{.stage-body{display:block !important}.stage-seta,.stage-pend{display:none !important}}
 @media print{.meds-toggle{display:none !important}.lista-medidores{display:block !important}}
 @media print{.ver-todos-btn,.entry-detalhes{display:none !important}}
@@ -233,6 +239,7 @@ textarea{min-height:56px;padding:9px 14px}
 <li>Cada medidor aparece fechado numa linha. Toque nele (▾) para abrir as cores, o 💾 e a 🗑️. Ao escolher a cor, ele fecha sozinho.</li>
 <li>As etapas aparecem fechadas, em pílulas. Toque na etapa (▾) para abrir os lançamentos dela. A bolinha laranja mostra que tem medidor pendente naquela etapa.</li>
 <li>Cada lançamento mostra quem pediu, a data, o <b>📚 livro</b> (e a sequência), a vizinha, a rua, a observação e os medidores. Os medidores ficam guardados: toque em <b>▾ Ver medidores</b> para abrir. A bolinha laranja mostra que ainda tem medidor pendente. Ao buscar um número, eles abrem sozinhos.</li>
+<li>O <b>✏️</b> ao lado da vizinha (ou <b>✏️ Livro</b>, quando ainda não tem livro) abre só o <b>número do livro</b> e a <b>vizinha</b> para preencher rápido, sem abrir a edição completa.</li>
 <li>Toque em <b>Detalhes ▾</b> para ver fotos, <b>Marcar digitado</b>, <b>✏️ Editar</b> e <b>Excluir</b>.</li>
 <li>Abaixo da busca: <b>📝 A digitar</b> mostra o que falta digitar, <b>✅ Digitados</b> o que já foi, e <b>Todos</b> mostra tudo junto.</li>
 <li>No topo: <b>↗️</b> compartilha o app e <b>🔄</b> atualiza para a versão mais nova.</li>
@@ -344,7 +351,7 @@ textarea{min-height:56px;padding:9px 14px}
 <div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.19 · 15/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.20 · 21/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -416,6 +423,21 @@ textarea{min-height:56px;padding:9px 14px}
 <div class="admin-lock-msg" id="recusaMsg"></div>
 </div>
 </div>
+<div class="resp-modal" id="livroRapidoModal">
+<div class="resp-card">
+<h2>✏️ Livro e vizinha</h2>
+<div class="resp-sub" id="livroRapidoInfo"></div>
+<label for="livroRapidoNum">Número do livro</label>
+<input type="text" id="livroRapidoNum" placeholder="Ex: 008585" inputmode="numeric" autocomplete="off">
+<label for="livroRapidoViz">Medidor ou UC vizinha</label>
+<input type="text" id="livroRapidoViz" placeholder="Ex: 987600" autocomplete="off">
+<div class="resp-actions">
+<button type="button" class="primary" id="livroRapidoSalvarBtn">💾 Salvar</button>
+<button type="button" id="livroRapidoCancelarBtn">Cancelar</button>
+</div>
+<div class="admin-lock-msg" id="livroRapidoMsg"></div>
+</div>
+</div>
 <div class="foto-modal" id="fotoModal">
 <button class="foto-modal-close" id="fotoModalClose">×</button>
 <img id="fotoModalImg" src="" alt="Foto">
@@ -425,9 +447,9 @@ textarea{min-height:56px;padding:9px 14px}
 </div>
 </div>
 <script>
-const APP_VERSAO='2.19';
-const APP_VERSAO_DATA='15/10/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20261015';
+const APP_VERSAO='2.20';
+const APP_VERSAO_DATA='21/10/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20261021';
 if('serviceWorker' in navigator){
 window.addEventListener('load',()=>{
 navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -443,6 +465,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.19"></script>
+<script type="module" src="app.js?v=2.20"></script>
 </body>
 </html>
