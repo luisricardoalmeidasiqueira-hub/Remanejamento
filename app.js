@@ -97,8 +97,14 @@ isAdmin
 const primeiraCarga=await fsMod.getDocs(fsMod.collection(firebaseDB,'remanejamentoRota'));
 entries=primeiraCarga.docs.map(d=>({...(d.data()||{}),id:d.id}));
 normalizarRegistros();
+// Virada de mês: o que ficou sem fazer nos meses anteriores passa sozinho para o mês atual (2.21).
+const rolados=primeiraCarga.metadata?.fromCache ? [] : rolarMesAutomatico();
 salvarLocal();
 renderEntries();
+if(rolados.length){
+(async()=>{ for(const e of rolados){ await salvarCloud(e); } })();
+const st=$('statusMsg'); st.textContent='📅 Pendências do mês passado foram passadas para este mês.'; st.style.color='var(--accent)'; setTimeout(()=>st.textContent='',4000);
+}
 setConexao(primeiraCarga.metadata?.fromCache ? 'conectando' : 'conectado');
 firebaseUnsubscribe=fsMod.onSnapshot(
 fsMod.collection(firebaseDB,'remanejamentoRota'),
@@ -1132,6 +1138,61 @@ const d=new Date((iso||todayStr())+'T12:00:00');
 d.setMonth(d.getMonth()+1);
 return d.toISOString().slice(0,10);
 }
+/* ===== VIRADA DE MÊS AUTOMÁTICA (2.21) =====
+   Lançamento de mês anterior, ainda não digitado, com medidor Pendente, Espelho ou Não realizado
+   (que não foi passado de mês): esses medidores vão sozinhos para um lançamento do mês atual.
+   Concluído e Recusado não passam. O ID do novo lançamento é fixo (id do original + mês),
+   então se dois celulares abrirem ao mesmo tempo, não duplica. */
+function rolarMesAutomatico(){
+const mesAtual=todayStr().slice(0,7);
+const sufixo=mesAtual.replace('-','');
+const destino=mesAtual+'-01';
+const alterados=new Set();
+[...entries].forEach(e=>{
+if(e.digitado)return;
+const mesE=String(e.dataRegistro||'').slice(0,7);
+if(!mesE || mesE>=mesAtual)return;
+const sobra=(e.medidores||[]).filter(m=>!m.transferidoPara && ['pendente','espelho','nao-realizado'].includes(m.status||'pendente'));
+if(!sobra.length)return;
+const novoId=e.id+'_'+sufixo;
+let novo=entries.find(x=>x.id===novoId);
+if(!novo){
+novo={
+id:novoId,
+medidores:[],
+solicitadoPor:e.solicitadoPor||'',
+solicitanteUid:e.solicitanteUid||null,
+vizinha:e.vizinha||'',
+livro:e.livro||'',
+livroTodo:!!e.livroTodo,
+parteLivro:!!e.parteLivro,
+seqInicio:e.seqInicio||'',
+seqFim:e.seqFim||'',
+rotaDestino:e.rotaDestino||'',
+rua:e.rua||'',
+obs:e.obs||'',
+fotos:[],
+digitado:false,digitadoEm:null,
+dataRegistro:destino,
+autoMes:true,
+criadoEm:Date.now()
+};
+entries.push(novo);
+}
+sobra.forEach(m=>{
+const novoMid=m.id+'_'+sufixo;
+if(!novo.medidores.some(x=>x.id===novoMid)){
+novo.medidores.push({id:novoMid,numero:m.numero,livro:!!m.livro,status:'pendente',statusEm:null,transferidoPara:null,origemId:e.id,origemData:e.dataRegistro});
+}
+m.transferidoPara=destino;
+// Fica como "Não realizado" no mês antigo, sem gerar aviso no 🔔 (statusEm vazio).
+if(m.status==='pendente'){ m.status='nao-realizado'; m.statusEm=null; m.respondidoPor=null; }
+});
+alterados.add(e); alterados.add(novo);
+});
+return [...alterados];
+}
+
 function setMedidorStatus(entryId,medidorId,status){
 const entry=entries.find(e=>e.id===entryId);
 const m=entry?.medidores.find(x=>x.id===medidorId);
@@ -1225,7 +1286,8 @@ return entries.filter(e=>{
 const etapa=String(e.rotaDestino||'').trim();
 const etapaOk=filtroEtapa==='' || (filtroEtapa==='__sem_etapa__'?etapa==='':etapaValorNormalizado(etapa)===String(filtroEtapa));
 const pessoaOk=filtroPessoa==='' || (filtroPessoa==='__sem_nome__'?!normNome(e.solicitadoPor):normNome(e.solicitadoPor)===filtroPessoa);
-const abaOk=abaDigitado==='todos' || (abaDigitado==='digitados'?!!e.digitado:!e.digitado);
+const todoPassado=(e.medidores||[]).length>0 && e.medidores.every(m=>m.transferidoPara);
+const abaOk=abaDigitado==='todos' || (abaDigitado==='digitados'?!!e.digitado:(!e.digitado && !todoPassado));
 return etapaOk && pessoaOk && abaOk && entryMatchesSearch(e,filtroAtual.trim().toLowerCase());
 });
 }
@@ -1341,6 +1403,7 @@ ${e.digitado?'<span class="entry-dig" title="Digitado">✓</span>':''}
 ${infoLancamento(e)}
 ${!imprimindo&&!filtroAtual.trim()?`<button type="button" class="meds-toggle" data-meds="${escapeHtml(e.id)}" aria-expanded="${medidoresVisiveis(e)}"><span class="meds-seta">▾</span> ${medidoresVisiveis(e)?'Esconder medidores':'Ver medidores'}${(e.medidores||[]).some(m=>m.status==='pendente')?'<span class="meds-pend" title="Tem medidor pendente"></span>':''}</button>`:''}
 <div class="entry-meta lista-medidores">
+${!imprimindo&&(e.medidores||[]).filter(m=>m.status==='pendente'&&!m.transferidoPara).length>=2?`<button type="button" class="todos-espelho-btn" data-action="todos-espelho" data-id="${escapeHtml(e.id)}">🔵 Marcar todos os pendentes como Espelho</button>`:''}
 ${(e.medidores||[]).map((m,idxM)=>idxM>=LIMITE_MEDIDORES&&!mostrarTodosMedidores(e)?'':`
 <div class="meter-card${medidoresAbertos.has(m.id)?' aberto':''}">
 <button type="button" class="meter-head" data-toggle-mid="${escapeHtml(m.id)}" aria-expanded="${medidoresAbertos.has(m.id)}">
@@ -1454,6 +1517,20 @@ return;
 }
 if(action==='editar-livro'){
 abrirEditarLivro(btn.dataset.id);
+return;
+}
+if(action==='todos-espelho'){
+const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
+const alvo=(entry.medidores||[]).filter(m=>m.status==='pendente'&&!m.transferidoPara);
+if(!alvo.length)return;
+if(!window.confirm(`Marcar os ${alvo.length} medidores pendentes deste lançamento como 🔵 Espelho? Os que já têm outra cor não mudam.`))return;
+const agora=Date.now();
+const copia=JSON.parse(JSON.stringify(entry.medidores));
+alvo.forEach(m=>{ m.status='espelho'; m.statusEm=agora; m.respondidoPor=firebaseUser?.uid||null; m.motivoRecusa=null; medidoresAbertos.delete(m.id); });
+if(!salvarLocal()){ entry.medidores=copia; alert('Não foi possível salvar. Tente de novo.'); return; }
+const okNuvem=firebaseDB ? await salvarCloud(entry) : true;
+renderEntries();
+const st=$('statusMsg'); st.textContent=okNuvem?`${alvo.length} medidores marcados como Espelho.`:'Marcado no aparelho, mas não no Firebase.'; st.style.color=okNuvem?'var(--accent)':'var(--red)'; setTimeout(()=>st.textContent='',2500);
 return;
 }
 if(action==='digitado'){

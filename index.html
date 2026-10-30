@@ -177,6 +177,10 @@ textarea{min-height:56px;padding:9px 14px}
 #livroRapidoModal input{width:100%}
 #livroRapidoModal label:first-of-type{margin-top:8px}
 @media print{.info-edit{display:none !important}}
+/* Todos em Espelho (2.21) */
+.todos-espelho-btn{display:block;width:100%;height:30px;margin:4px 0 2px;border:0;border-radius:999px;background:#e3edfb;color:#1565c0;font-family:-apple-system,system-ui,sans-serif;font-size:12.5px;font-weight:700;cursor:pointer}
+.todos-espelho-btn:active{transform:scale(.98)}
+@media print{.todos-espelho-btn{display:none !important}}
 @media print{.stage-body{display:block !important}.stage-seta,.stage-pend{display:none !important}}
 @media print{.meds-toggle{display:none !important}.lista-medidores{display:block !important}}
 @media print{.ver-todos-btn,.entry-detalhes{display:none !important}}
@@ -240,6 +244,8 @@ textarea{min-height:56px;padding:9px 14px}
 <li>As etapas aparecem fechadas, em pílulas. Toque na etapa (▾) para abrir os lançamentos dela. A bolinha laranja mostra que tem medidor pendente naquela etapa.</li>
 <li>Cada lançamento mostra quem pediu, a data, o <b>📚 livro</b> (e a sequência), a vizinha, a rua, a observação e os medidores. Os medidores ficam guardados: toque em <b>▾ Ver medidores</b> para abrir. A bolinha laranja mostra que ainda tem medidor pendente. Ao buscar um número, eles abrem sozinhos.</li>
 <li>O <b>✏️</b> ao lado da vizinha (ou <b>✏️ Livro</b>, quando ainda não tem livro) abre só o <b>número do livro</b> e a <b>vizinha</b> para preencher rápido, sem abrir a edição completa.</li>
+<li>Muitos medidores em Espelho? Abra os medidores e toque em <b>🔵 Marcar todos os pendentes como Espelho</b>. Os que já têm outra cor não mudam.</li>
+<li><b>Virada do mês:</b> o que ficou Pendente, Espelho ou Não realizado e não foi digitado passa sozinho para o mês seguinte, num lançamento novo com os mesmos dados. Concluído e Recusado não passam. O lançamento antigo sai de <b>📝 A digitar</b> e continua em <b>Todos</b>.</li>
 <li>Toque em <b>Detalhes ▾</b> para ver fotos, <b>Marcar digitado</b>, <b>✏️ Editar</b> e <b>Excluir</b>.</li>
 <li>Abaixo da busca: <b>📝 A digitar</b> mostra o que falta digitar, <b>✅ Digitados</b> o que já foi, e <b>Todos</b> mostra tudo junto.</li>
 <li>No topo: <b>↗️</b> compartilha o app e <b>🔄</b> atualiza para a versão mais nova.</li>
@@ -351,7 +357,7 @@ textarea{min-height:56px;padding:9px 14px}
 <div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.20 · 21/10/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.21 · 30/10/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -447,9 +453,9 @@ textarea{min-height:56px;padding:9px 14px}
 </div>
 </div>
 <script>
-const APP_VERSAO='2.20';
-const APP_VERSAO_DATA='21/10/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20261021';
+const APP_VERSAO='2.21';
+const APP_VERSAO_DATA='30/10/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20261030';
 if('serviceWorker' in navigator){
 window.addEventListener('load',()=>{
 navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -465,6 +471,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.20"></script>
+<script type="module" src="app.js?v=2.21"></script>
 </body>
 </html>
