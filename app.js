@@ -1435,7 +1435,7 @@ ${e.digitado?'<span class="entry-dig" title="Digitado">✓</span>':''}
 ${infoLancamento(e)}
 ${!imprimindo&&!filtroAtual.trim()?`<button type="button" class="meds-toggle" data-meds="${escapeHtml(e.id)}" aria-expanded="${medidoresVisiveis(e)}"><span class="meds-seta">▾</span> ${medidoresVisiveis(e)?'Esconder medidores':'Ver medidores'}${(e.medidores||[]).some(m=>m.status==='pendente')?'<span class="meds-pend" title="Tem medidor pendente"></span>':''}</button>`:''}
 <div class="entry-meta lista-medidores">
-${!imprimindo&&(e.medidores||[]).filter(m=>m.status==='pendente'&&!m.transferidoPara).length>=2?`<button type="button" class="todos-espelho-btn" data-action="todos-espelho" data-id="${escapeHtml(e.id)}">🔵 Marcar todos os pendentes como Espelho</button>`:''}
+${!imprimindo&&(e.medidores||[]).filter(m=>!m.transferidoPara&&m.status!=='recusado').length>=2?`<div class="marcar-todos"><span class="marcar-todos-tit">Marcar todos:</span><div class="marcar-todos-btns"><button type="button" data-action="todos-cor" data-cor="espelho" data-id="${escapeHtml(e.id)}">🔵 Espelho</button><button type="button" data-action="todos-cor" data-cor="nao-realizado" data-id="${escapeHtml(e.id)}">🔴 Não realizado</button><button type="button" data-action="todos-cor" data-cor="concluido" data-id="${escapeHtml(e.id)}">🟢 Concluído</button><button type="button" data-action="todos-cor" data-cor="pendente" data-id="${escapeHtml(e.id)}"><span class="dot-cinza"></span>Pendente</button></div></div>`:''}
 ${(e.medidores||[]).map((m,idxM)=>idxM>=LIMITE_MEDIDORES&&!mostrarTodosMedidores(e)?'':`
 <div class="meter-card${medidoresAbertos.has(m.id)?' aberto':''}">
 <button type="button" class="meter-head" data-toggle-mid="${escapeHtml(m.id)}" aria-expanded="${medidoresAbertos.has(m.id)}">
@@ -1549,6 +1549,34 @@ return;
 }
 if(action==='editar-livro'){
 abrirEditarLivro(btn.dataset.id);
+return;
+}
+if(action==='todos-cor'){
+const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
+const cor=btn.dataset.cor;
+// Todos do lançamento, menos os já passados de mês e os Recusados (que têm motivo).
+const alvo=(entry.medidores||[]).filter(m=>!m.transferidoPara && m.status!=='recusado' && m.status!==cor);
+const nomes={'espelho':'🔵 Espelho','nao-realizado':'🔴 Não realizado','concluido':'🟢 Concluído','pendente':'Pendente'};
+if(!alvo.length){ const st=$('statusMsg'); st.textContent=`Todos já estão como ${nomes[cor]}.`; st.style.color='var(--accent)'; setTimeout(()=>st.textContent='',2500); return; }
+if(!window.confirm(`Marcar ${alvo.length===1?'1 medidor':alvo.length+' medidores'} deste lançamento como ${nomes[cor]}?${(entry.medidores||[]).some(m=>m.status==='recusado'&&!m.transferidoPara)?' Os Recusados não mudam.':''}`))return;
+const agora=Date.now();
+const copia=JSON.parse(JSON.stringify(entry));
+alvo.forEach(m=>{
+if(cor==='pendente'){ m.status='pendente'; m.statusEm=null; m.respondidoPor=null; }
+else { m.status=cor; m.statusEm=agora; m.respondidoPor=firebaseUser?.uid||null; }
+m.motivoRecusa=null;
+medidoresAbertos.delete(m.id);
+});
+silenciarAutoDigitado=true;
+const okLocal=salvarLocal();
+silenciarAutoDigitado=false;
+if(!okLocal){ Object.keys(entry).forEach(k=>delete entry[k]); Object.assign(entry,copia); alert('Não foi possível salvar. Tente de novo.'); return; }
+const okNuvem=firebaseDB ? await salvarCloud(entry) : true;
+renderEntries();
+let msg=`${alvo.length===1?'1 medidor marcado':alvo.length+' medidores marcados'} como ${nomes[cor]}.`;
+if(entry.digitado && !copia.digitado) msg+=' O lançamento foi para ✅ Digitados.';
+if(!entry.digitado && copia.digitado) msg+=' O lançamento voltou para 📝 A digitar.';
+const st=$('statusMsg'); st.textContent=okNuvem?msg:'Marcado no aparelho, mas não no Firebase.'; st.style.color=okNuvem?'var(--accent)':'var(--red)'; setTimeout(()=>st.textContent='',3500);
 return;
 }
 if(action==='todos-espelho'){
