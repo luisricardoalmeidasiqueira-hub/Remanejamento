@@ -99,8 +99,12 @@ entries=primeiraCarga.docs.map(d=>({...(d.data()||{}),id:d.id}));
 normalizarRegistros();
 // Virada de mês: o que ficou sem fazer nos meses anteriores passa sozinho para o mês atual (2.21).
 const rolados=primeiraCarga.metadata?.fromCache ? [] : rolarMesAutomatico();
-salvarLocal();
+const autoDig=primeiraCarga.metadata?.fromCache ? [] : entries.filter(e=>ajustarDigitadoAuto(e));
+silenciarAutoDigitado=true; salvarLocal(); silenciarAutoDigitado=false;
 renderEntries();
+if(autoDig.length){
+(async()=>{ for(const e of autoDig){ if(!rolados.includes(e)) await salvarCloud(e); } })();
+}
 if(rolados.length){
 (async()=>{ for(const e of rolados){ await salvarCloud(e); } })();
 const st=$('statusMsg'); st.textContent='📅 Pendências do mês passado foram passadas para este mês.'; st.style.color='var(--accent)'; setTimeout(()=>st.textContent='',4000);
@@ -115,7 +119,7 @@ if(cloudApplying)return;
 if(!snap.docChanges().length)return;
 entries=snap.docs.map(d=>({...(d.data()||{}),id:d.id}));
 normalizarRegistros();
-salvarLocal();
+silenciarAutoDigitado=true; salvarLocal(); silenciarAutoDigitado=false;
 renderEntries();
 },
 err=>{
@@ -1069,7 +1073,35 @@ console.error('Erro ao ler registros',e);
 return [];
 }
 }
+/* ===== DIGITADO AUTOMÁTICO (2.22) =====
+   Lançamento em que TODOS os medidores estão 🟢 Concluído (ou ⛔ Recusado) já está resolvido:
+   vai sozinho para ✅ Digitados. Se depois algum voltar a outra cor, ele volta para 📝 A digitar.
+   Se você desmarcar "Digitado" na mão, o app respeita e não marca de novo sozinho. */
+let silenciarAutoDigitado=false;
+function lancamentoResolvido(e){
+const meds=(e.medidores||[]).filter(m=>!m.transferidoPara);
+return meds.length>0 && meds.every(m=>m.status==='concluido'||m.status==='recusado');
+}
+function ajustarDigitadoAuto(e){
+if(!e)return false;
+const resolvido=lancamentoResolvido(e);
+if(resolvido && !e.digitado && !e.semAutoDigitado){
+e.digitado=true; e.digitadoEm=Date.now(); e.autoDigitado=true;
+return 'entrou';
+}
+if(!resolvido && e.digitado && e.autoDigitado){
+e.digitado=false; e.digitadoEm=null; e.autoDigitado=false;
+return 'saiu';
+}
+return false;
+}
 function salvarLocal(){
+let entrou=false, saiu=false;
+entries.forEach(e=>{ const r=ajustarDigitadoAuto(e); if(r==='entrou')entrou=true; if(r==='saiu')saiu=true; });
+if((entrou||saiu) && !silenciarAutoDigitado){
+const st=$('statusMsg');
+if(st){ st.textContent=entrou?'✅ Todos concluídos — o lançamento foi para Digitados.':'O lançamento voltou para 📝 A digitar.'; st.style.color='var(--accent)'; setTimeout(()=>st.textContent='',3000); }
+}
 try{
 localStorage.setItem(CHAVE_DADOS,JSON.stringify(entries));
 return true;
@@ -1536,7 +1568,11 @@ return;
 if(action==='digitado'){
 const entry=entries.find(e=>e.id===btn.dataset.id); if(!entry)return;
 entry.digitado=!entry.digitado; entry.digitadoEm=entry.digitado?Date.now():null;
-salvarLocal(); await salvarCloud(entry); renderEntries();
+entry.autoDigitado=false;
+// Desmarcou na mão um lançamento já todo concluído: não marcar de novo sozinho.
+entry.semAutoDigitado=!entry.digitado && lancamentoResolvido(entry);
+silenciarAutoDigitado=true; salvarLocal(); silenciarAutoDigitado=false;
+await salvarCloud(entry); renderEntries();
 if(abaDigitado!=='todos'){ const st=$('statusMsg'); st.textContent=entry.digitado?'Movido para ✅ Digitados.':'Voltou para 📝 A digitar.'; st.style.color='var(--accent)'; setTimeout(()=>st.textContent='',2500); }
 return;
 }
