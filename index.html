@@ -188,6 +188,8 @@ textarea{min-height:56px;padding:9px 14px}
 .marcar-todos-btns button{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border:0;border-radius:999px;background:#fff;color:#1c1c1e;font-size:12px;font-weight:600;cursor:pointer}
 .marcar-todos-btns button:active{transform:scale(.96)}
 @media print{.marcar-todos{display:none !important}}
+/* Aviso de medidor repetido (2.24) */
+.medidor-aviso{margin:-2px 0 6px 20px;padding:4px 10px;border-radius:12px;background:#fdecea;color:#b3261e;font-family:-apple-system,system-ui,sans-serif;font-size:12px;font-weight:600;line-height:1.35}
 @media print{.stage-body{display:block !important}.stage-seta,.stage-pend{display:none !important}}
 @media print{.meds-toggle{display:none !important}.lista-medidores{display:block !important}}
 @media print{.ver-todos-btn,.entry-detalhes{display:none !important}}
@@ -254,6 +256,7 @@ textarea{min-height:56px;padding:9px 14px}
 <li>Muitos medidores? Abra os medidores e, em <b>Marcar todos</b>, toque na cor (🔵 Espelho, 🔴 Não realizado, 🟢 Concluído ou Pendente). Todos do lançamento ficam com aquela cor de uma vez. Os ⛔ Recusados não mudam.</li>
 <li><b>Virada do mês:</b> o que ficou Pendente, Espelho ou Não realizado e não foi digitado passa sozinho para o mês seguinte, num lançamento novo com os mesmos dados. Concluído e Recusado não passam. O lançamento antigo sai de <b>📝 A digitar</b> e continua em <b>Todos</b>.</li>
 <li>Quando <b>todos</b> os medidores de um lançamento ficam <b>🟢 Concluído</b> (ou ⛔ Recusado), ele vai sozinho para <b>✅ Digitados</b>. Se algum voltar para outra cor, ele volta para <b>📝 A digitar</b>.</li>
+<li><b>Medidor repetido não salva.</b> Se o número já estiver lançado (em qualquer mês, mesmo digitado ou passado para o mês seguinte), aparece um aviso vermelho embaixo dele dizendo em qual etapa e data está. Só pode lançar de novo se o anterior foi ⛔ Recusado.</li>
 <li>Toque em <b>Detalhes ▾</b> para ver fotos, <b>Marcar digitado</b>, <b>✏️ Editar</b> e <b>Excluir</b>.</li>
 <li>Abaixo da busca: <b>📝 A digitar</b> mostra o que falta digitar, <b>✅ Digitados</b> o que já foi, e <b>Todos</b> mostra tudo junto.</li>
 <li>No topo: <b>↗️</b> compartilha o app e <b>🔄</b> atualiza para a versão mais nova.</li>
@@ -365,7 +368,7 @@ textarea{min-height:56px;padding:9px 14px}
 <div class="export-actions"><button class="export-btn" id="exportBtn">📄 Exportar CSV</button><button class="export-btn print-btn" id="printBtn">🖨️ Imprimir por etapa</button></div>
 <div class="print-title">Remanejamento de Rota — Registros por etapa</div>
 <div id="entriesList"></div>
-<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.23 · 05/11/2026</span></footer>
+<footer>Desenvolvido por Luís Ricardo de Almeida Siqueira<br>© 2026 Luís Ricardo de Almeida Siqueira — Todos os direitos reservados.<br><span class="versao-app" id="versaoApp">Versão 2.24 · 06/11/2026</span></footer>
 </div>
 <div class="admin-lock" id="adminLock">
 <div class="admin-lock-card">
@@ -461,9 +464,9 @@ textarea{min-height:56px;padding:9px 14px}
 </div>
 </div>
 <script>
-const APP_VERSAO='2.23';
-const APP_VERSAO_DATA='05/11/2026';
-const PWA_BUILD='v'+APP_VERSAO+'-20261105b';
+const APP_VERSAO='2.24';
+const APP_VERSAO_DATA='06/11/2026';
+const PWA_BUILD='v'+APP_VERSAO+'-20261106';
 if('serviceWorker' in navigator){
 window.addEventListener('load',()=>{
 navigator.serviceWorker.register('./service-worker.js?v='+PWA_BUILD,{scope:'./'})
@@ -479,6 +482,6 @@ console.log('Nova versão do aplicativo disponível.');
 });
 }
 </script>
-<script type="module" src="app.js?v=2.23"></script>
+<script type="module" src="app.js?v=2.24"></script>
 </body>
 </html>

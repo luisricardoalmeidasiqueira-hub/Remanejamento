@@ -824,6 +824,44 @@ $('livroRapidoCancelarBtn').addEventListener('click',fecharEditarLivro);
 $('livroRapidoModal').addEventListener('click',e=>{ if(e.target.id==='livroRapidoModal')fecharEditarLivro(); });
 $('livroRapidoNum').addEventListener('keydown',e=>{ if(e.key==='Enter')salvarEditarLivro(); });
 $('livroRapidoViz').addEventListener('keydown',e=>{ if(e.key==='Enter')salvarEditarLivro(); });
+/* ===== BLOQUEIO DE MEDIDOR REPETIDO (2.24) =====
+   Procura o número em TODOS os lançamentos (qualquer mês, digitado ou não, passado de mês ou não).
+   Compara sem espaços, traços e zeros à esquerda: 000392701104563 = 392701104563.
+   Só não bloqueia se as vezes anteriores foram todas ⛔ Recusadas (aí pode lançar de novo). */
+function normMed(v){ return String(v||'').toUpperCase().replace(/[^0-9A-Z]/g,'').replace(/^0+/,''); }
+function acharRepetido(numero,ignorarId){
+const n=normMed(numero); if(!n)return null;
+let achado=null;
+entries.forEach(e=>{
+if(e.id===ignorarId)return;
+(e.medidores||[]).forEach(m=>{
+if(m.livro || m.status==='recusado' || normMed(m.numero)!==n)return;
+// Mostra o lançamento mais recente onde ele está
+if(!achado || String(e.dataRegistro||'')>String(achado.e.dataRegistro||''))achado={e,m};
+});
+});
+return achado;
+}
+function numerosJaDoLancamento(){
+if(!editandoId)return new Set();
+const ent=entries.find(x=>x.id===editandoId);
+return new Set((ent?.medidores||[]).filter(m=>!m.livro).map(m=>normMed(m.numero)));
+}
+function textoRepetido(r){
+return `já está salvo na ${etapaLabel(r.e.rotaDestino)}, lançado em ${formatDateBR(r.e.dataRegistro)}${r.e.solicitadoPor?' por '+r.e.solicitadoPor:''}${r.e.digitado?' (digitado)':''}`;
+}
+function avisoRepetidoLinha(i){
+const box=$('medidorList').querySelector(`[data-aviso="${i}"]`); if(!box)return;
+const val=medidorValores[i]; const n=normMed(val);
+let msg='';
+if(n){
+const igualNoForm=medidorValores.findIndex((v,j)=>j<i && normMed(v)===n);
+if(igualNoForm>=0) msg='⚠️ Número repetido aqui no formulário.';
+else if(!numerosJaDoLancamento().has(n)){ const r=acharRepetido(val,editandoId); if(r) msg=`⚠️ Este medidor ${textoRepetido(r)}.`; }
+}
+box.textContent=msg;
+box.style.display=msg?'block':'none';
+}
 function renderMedidorRows(){
 $('medidorList').innerHTML = medidorValores.map((val,i)=>`
 <div class="medidor-row">
@@ -831,9 +869,11 @@ $('medidorList').innerHTML = medidorValores.map((val,i)=>`
 <input type="text" inputmode="text" placeholder="Ex: 987654 ou UC 123456" class="medidor-input" data-i="${i}" value="${escapeHtml(val)}">
 ${`<button type="button" class="rm-medidor" data-i="${i}" title="Excluir somente este número (correção)">🗑️</button>`}
 </div>
+<div class="medidor-aviso" data-aviso="${i}" style="display:none"></div>
 `).join('');
+medidorValores.forEach((_,i)=>avisoRepetidoLinha(i));
 $('medidorList').querySelectorAll('.medidor-input').forEach(inp=>{
-inp.addEventListener('input',()=>{ medidorValores[Number(inp.dataset.i)] = inp.value; });
+inp.addEventListener('input',()=>{ medidorValores[Number(inp.dataset.i)] = inp.value; medidorValores.forEach((_,i)=>avisoRepetidoLinha(i)); });
 });
 $('medidorList').querySelectorAll('.rm-medidor').forEach(btn=>{
 btn.addEventListener('click',()=>{
@@ -1799,6 +1839,24 @@ status.style.color='var(--red)';
 $('medidorList').scrollIntoView({behavior:'smooth',block:'center'});
 setTimeout(()=>{ const inp=$('medidorList').querySelector('.medidor-input'); if(inp)inp.focus(); },300);
 return;
+}
+// Bloqueia medidor repetido (no próprio formulário ou já salvo em qualquer mês).
+{
+const vistos=new Set();
+const jaDoLanc=numerosJaDoLancamento();
+for(const num of medidores){
+const n=normMed(num);
+if(vistos.has(n)){ avisoCampo(`O medidor ${num} está repetido no formulário. Apague um deles.`,'medidorList'); return; }
+vistos.add(n);
+if(jaDoLanc.has(n))continue;
+const r=acharRepetido(num,editandoId);
+if(r){
+status.textContent=`🚫 Não salvou: o medidor ${num} ${textoRepetido(r)}.`;
+status.style.color='var(--red)';
+$('medidorList').scrollIntoView({behavior:'smooth',block:'center'});
+return;
+}
+}
 }
 if(editandoId){
 salvarEdicao({medidores,data,vizinha,livro,rotaDestino,rua,obs,solicitadoPor,livroTodo,parteLivro,seqInicio,seqFim});
